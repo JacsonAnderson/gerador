@@ -1,0 +1,1 @@
+Aqui vou colocar todas as minhas ferramentas de geração de conteudo de forma automatica, conforme eu for criando as aplicação vou colocando os tutoriais aqui
