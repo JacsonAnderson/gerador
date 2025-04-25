@@ -1,9 +1,13 @@
 import tkinter as tk
 from tkinter import ttk
 import ttkbootstrap as tb
+import threading
 from ttkbootstrap.constants import *
+
+
 from modal_criar_canal import abrir_modal_criar_canal
 from modal_adicionar_videos import abrir_modal_adicionar_videos
+
 
 from app_roteiro import controller_roteiro
 
@@ -62,7 +66,7 @@ class GeradorDeVideosApp:
         nomes_botoes = ["Gerar Roteiro", "Botão 2", "Botão 3", "Botão 4"]
         for i, nome in enumerate(nomes_botoes):
             if nome == "Gerar Roteiro":
-                action = controller_roteiro.iniciar_controller
+                action = lambda: threading.Thread(target=controller_roteiro.iniciar_controller, daemon=True).start()
             else:
                 action = lambda: self.add_log(f"Botão {nome} clicado")
 
