@@ -1,9 +1,11 @@
 import os
+import re
 import json
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 
+# Carregar API_KEY do .env
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
@@ -18,9 +20,9 @@ def gerar_topicos(canal, video_id, log=print):
     control_path = video_path / "control"
 
     transcript_path = control_path / "transcript_original.json"
-    topicos_path = control_path / "topicos.txt"  # Mude para .txt
+    topicos_json_path = control_path / "topicos.json"
 
-    if topicos_path.exists():
+    if topicos_json_path.exists():
         log(f"⚠️ Tópicos já existentes para {canal}/{video_id}.")
         return True
 
@@ -44,6 +46,7 @@ def gerar_topicos(canal, video_id, log=print):
         log(f"❌ Prompt de tópicos não definido para o canal {canal}.")
         return False
 
+    # Monta o prompt final
     prompt_final = f"""
 {prompt_topicos}
 
@@ -66,18 +69,34 @@ RESUMO: "Uma descrição detalhada e clara sobre o conteúdo específico do Tóp
 
     try:
         resposta = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt_final}],
-            temperature=0.7,
+            temperature=0.4,
         )
 
-        topicos_gerados = resposta.choices[0].message.content.strip()
+        texto_topicos = resposta.choices[0].message.content.strip()
 
-        # Salvar tópicos gerados diretamente como texto puro (.txt)
-        with open(topicos_path, "w", encoding="utf-8") as f:
-            f.write(topicos_gerados)
+        # Expressão para capturar número, título e resumo
+        padrao = r'Topico\s*(\d+):\s*"([^"]+)"\s*RESUMO:\s*"([^"]+)"'
+        topicos_encontrados = re.findall(padrao, texto_topicos, re.IGNORECASE)
 
-        log(f"✅ Tópicos salvos em {topicos_path}")
+        if not topicos_encontrados:
+            log(f"⚠️ Nenhum tópico detectado no texto gerado.")
+            return False
+
+        lista_topicos = []
+        for numero, titulo, resumo in topicos_encontrados:
+            lista_topicos.append({
+                "numero": int(numero),
+                "titulo": titulo.strip(),
+                "resumo": resumo.strip()
+            })
+
+        # Salva no formato JSON estruturado
+        with open(topicos_json_path, "w", encoding="utf-8") as f:
+            json.dump({"topicos": lista_topicos}, f, indent=4, ensure_ascii=False)
+
+        log(f"✅ Tópicos salvos em {topicos_json_path}")
         return True
 
     except Exception as e:

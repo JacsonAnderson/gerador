@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import ttk
 import ttkbootstrap as tb
 from tkinter import messagebox
+from app_roteiro.modulo_idioma import IDIOMAS_SUPORTADOS
 
 def abrir_modal_criar_canal(janela_pai):
     modal = tb.Toplevel(janela_pai)
@@ -24,8 +25,11 @@ def abrir_modal_criar_canal(janela_pai):
 
     # Idioma do canal
     adicionar_label("Idioma do canal:")
-    idioma_entry = ttk.Entry(modal, width=60)
-    idioma_entry.pack(pady=2, padx=20)
+    idioma_var = tk.StringVar()
+    idiomas_disponiveis = [f"{codigo.upper()} - {info['nome']}" for codigo, info in IDIOMAS_SUPORTADOS.items()]
+    idioma_combo = ttk.Combobox(modal, textvariable=idioma_var, values=idiomas_disponiveis, state="readonly", width=58)
+    idioma_combo.pack(pady=2, padx=20)
+    idioma_combo.set(idiomas_disponiveis[0])  # seleciona o primeiro por padrão
 
     # Marca d'água
     adicionar_label("Marca d'água (texto ou caminho):")
@@ -50,7 +54,7 @@ def abrir_modal_criar_canal(janela_pai):
 
     def salvar():
         nome = nome_entry.get().strip()
-        idioma = idioma_entry.get().strip()
+        idioma_selecionado = idioma_var.get().split(" - ")[0].lower()  # pega apenas o código (ex: 'pt', 'es', 'en')
         marca = marca_entry.get().strip()
         prompt_topicos = prompt_topicos_text.get("1.0", tk.END).strip()
         prompt_roteiro = prompt_roteiro_text.get("1.0", tk.END).strip()
@@ -77,7 +81,7 @@ def abrir_modal_criar_canal(janela_pai):
             canal_config = {
                 "id": canal_id,
                 "nome": nome,
-                "idioma": idioma,
+                "idioma": idioma_selecionado,
                 "marca_dagua": marca,
                 "prompt_topicos": prompt_topicos,
                 "prompt_roteiro": prompt_roteiro,
@@ -99,4 +103,3 @@ def abrir_modal_criar_canal(janela_pai):
             messagebox.showerror("Erro", f"Erro ao criar canal:\n{e}")
 
     ttk.Button(modal, text="Salvar", bootstyle="success", command=salvar).pack(pady=20)
-

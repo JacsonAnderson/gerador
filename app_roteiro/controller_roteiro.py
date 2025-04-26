@@ -5,6 +5,7 @@ from app_roteiro.transcritor import gerar_transcricao
 from app_roteiro.gerador_resumo import gerar_resumo
 from app_roteiro.gerador_topicos import gerar_topicos
 from app_roteiro.gerador_introducao import gerar_introducao
+from app_roteiro.gerador_conteudos import gerar_conteudos_topicos  # ✅ NOVO
 
 DATA_DIR = "data"
 log_callback = print
@@ -61,8 +62,8 @@ def listar_videos_para_topicos():
                 control_path = os.path.join(video_path, "control")
                 transcript_json = os.path.join(control_path, "transcript_original.json")
                 resumo_json = os.path.join(control_path, "resumo.json")
-                topicos_txt = os.path.join(control_path, "topicos.txt")  # <-- corrigido para TXT
-                if os.path.exists(transcript_json) and os.path.exists(resumo_json) and not os.path.exists(topicos_txt):
+                topicos_json = os.path.join(control_path, "topicos.json")
+                if os.path.exists(transcript_json) and os.path.exists(resumo_json) and not os.path.exists(topicos_json):
                     videos.append(item)
         if videos:
             tarefas[canal] = sorted(videos)
@@ -79,9 +80,29 @@ def listar_videos_para_introducao():
             video_path = os.path.join(canal_path, item)
             if os.path.isdir(video_path) and item.isdigit():
                 control_path = os.path.join(video_path, "control")
-                topicos_txt = os.path.join(control_path, "topicos.txt")
+                topicos_json = os.path.join(control_path, "topicos.json")
                 introducao_txt = os.path.join(control_path, "introducao.txt")
-                if os.path.exists(topicos_txt) and not os.path.exists(introducao_txt):
+                if os.path.exists(topicos_json) and not os.path.exists(introducao_txt):
+                    videos.append(item)
+        if videos:
+            tarefas[canal] = sorted(videos)
+    return tarefas
+
+def listar_videos_para_conteudos():
+    tarefas = {}
+    for canal in os.listdir(DATA_DIR):
+        canal_path = os.path.join(DATA_DIR, canal)
+        if not os.path.isdir(canal_path):
+            continue
+        videos = []
+        for item in os.listdir(canal_path):
+            video_path = os.path.join(canal_path, item)
+            if os.path.isdir(video_path) and item.isdigit():
+                control_path = os.path.join(video_path, "control")
+                introducao_txt = os.path.join(control_path, "introducao.txt")
+                topicos_json = os.path.join(control_path, "topicos.json")
+                roteiros_json = os.path.join(control_path, "roteiros.json")
+                if os.path.exists(introducao_txt) and os.path.exists(topicos_json) and not os.path.exists(roteiros_json):
                     videos.append(item)
         if videos:
             tarefas[canal] = sorted(videos)
@@ -143,6 +164,20 @@ def processar_roteiros():
                     log_callback(f"⚠️ Erro ao gerar introdução para {canal}/{video_id}")
     else:
         log_callback("✅ Nenhuma introdução pendente.")
+
+    # Fase 5 - Conteúdos dos Tópicos
+    conteudos_tarefas = listar_videos_para_conteudos()
+    if conteudos_tarefas:
+        log_callback("✍️ Etapa 5: Conteúdos dos tópicos pendentes encontrados.")
+        exibir_tarefas(conteudos_tarefas)
+        for canal, videos in conteudos_tarefas.items():
+            for video_id in videos:
+                log_callback(f"\n🧾 Gerando conteúdos para {canal}/{video_id}...")
+                sucesso = gerar_conteudos_topicos(canal, video_id, log_callback)
+                if not sucesso:
+                    log_callback(f"⚠️ Erro ao gerar conteúdos para {canal}/{video_id}")
+    else:
+        log_callback("✅ Nenhum conteúdo pendente.")
 
 def exibir_tarefas(tarefas):
     for canal, lista in tarefas.items():
