@@ -179,6 +179,19 @@ def processar_roteiros():
     else:
         log_callback("✅ Nenhum conteúdo pendente.")
 
+        
+
+    # Fase 6 - Preparar roteiro para áudio (temporário)
+    try:
+        from geracao_audio_eleven.controller_audio_eleven import preparar_audios_para_tts
+        log_callback("🎧 Etapa 6 (TEMPORÁRIA): Preparando roteiros para áudio ElevenLabs...")
+        preparar_audios_para_tts()
+    except Exception as e:
+        log_callback(f"⚠️ Erro ao preparar áudios para ElevenLabs: {e}")
+
+
+
+
 def exibir_tarefas(tarefas):
     for canal, lista in tarefas.items():
         log_callback(f"\n🎬 Canal '{canal}': {len(lista)} vídeo(s) pendente(s).")
