@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
+from app_roteiro.modulo_idioma import obter_instrucao_idioma
 
 # Carregar API_KEY do .env
 load_dotenv()
@@ -41,10 +42,13 @@ def gerar_topicos(canal, video_id, log=print):
     with open(canal_config_path, "r", encoding="utf-8") as f:
         canal_config = json.load(f)
         prompt_topicos = canal_config.get("prompt_topicos", "").strip()
+        idioma = canal_config.get("idioma", "").lower()
 
     if not prompt_topicos:
         log(f"❌ Prompt de tópicos não definido para o canal {canal}.")
         return False
+
+    instrucoes_idioma = obter_instrucao_idioma(idioma)
 
     # Monta o prompt final
     prompt_final = f"""
@@ -54,6 +58,11 @@ Transcrição completa do vídeo para referência:
 {transcricao_original}
 
 ⚠️ IMPORTANTE: Gere exatamente no formato abaixo, sem comentários extras, seguindo obrigatoriamente a quantidade de tópicos solicitada (nem mais, nem menos):
+⚠️ IMPORTANTE: Estes tópicos devem ser direto ao ponto. Exemplo: se o vídeo é sobre "4 remédios para curar o coração", o Tópico 01 fala sobre o problema, o Tópico 02 fala sobre o Remédio 01, o Tópico 03 sobre o Remédio 02, e assim por diante. 
+⚠️ IMPORTANTE: Vamos evitar tópicos genéricos! Foque no que foi dito na transcrição e agregue valor real ao conteúdo.
+⚠️ IMPORTANTE: Cada tópico deve ser útil para a criação de conteúdos altamente relevantes e impactantes depois.
+
+{instrucoes_idioma}
 
 Topico 01: "TÍTULO IMPACTANTE E PERSUASIVO DO TÓPICO 01"
 RESUMO: "Uma descrição detalhada e clara sobre o conteúdo específico do Tópico 01."

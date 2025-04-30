@@ -50,37 +50,42 @@ def gerar_introducao(canal, video_id, log=print):
     instrucoes_idioma = obter_instrucao_idioma(idioma_configurado)
 
     prompt = f"""
-Você é um especialista em criação de introduções para vídeos de YouTube, focadas em **captar imediatamente a atenção emocional e racional do público**, sem utilizar frases genéricas, místicas ou vagas.
+Você é um especialista em criação de introduções altamente persuasivas e emocionalmente impactantes para vídeos de YouTube. Seu trabalho é capturar imediatamente a atenção do público e gerar um forte desejo de continuar assistindo, usando frases que toquem nas dores reais, nos desejos ocultos e nas promessas transformadoras que o vídeo pode entregar.
 
-Sua missão é criar uma introdução curta (máximo 200 palavras) para o canal "{canal}", considerando os tópicos apresentados abaixo, de forma a:
+Sua missão é criar uma introdução curta (máximo 150 palavras) para o canal "{canal}", baseada nos tópicos abaixo, respeitando as diretrizes obrigatórias:
 
-- Entrar diretamente na dor, no desejo ou na necessidade real que o público enfrenta.
-- Despertar uma sensação urgente e genuína de identificação e esperança.
-- Deixar claro, de forma sutil e emocional, que o conteúdo do vídeo trará respostas práticas, reveladoras ou transformadoras, alinhadas com as expectativas da audiência.
-- Utilizar uma linguagem emocionalmente intensa, **sem abstrações vagas, sem metáforas genéricas, sem textos poéticos irreais**.
-- Utilizar frases fortes, específicas, diretas e com peso emocional — como se estivesse falando com uma pessoa que realmente precisa daquele conteúdo.
-- Manter o fluxo natural e fluido, **sem soar como abertura formal de vídeo** e **sem finalização explícita**.
+⚡ Diretrizes obrigatórias:
+- A primeira frase deve **impactar diretamente o emocional ou o racional do espectador em menos de 5 segundos**, com uma dor, desejo ou pergunta instigante.
+- A introdução deve criar uma **conexão real com o público**, fazendo com que ele se sinta compreendido em sua dor, ansiedade, dúvida ou busca pessoal.
+- Em seguida, apresente **uma promessa concreta**, uma transformação que será abordada no vídeo — **sem soar como técnica de marketing**, mas com **autoridade natural** e tom de revelação importante.
+- Finalize com uma **frase fluida e emocional**, sem dar fechamento ou comandos explícitos — apenas mantendo a tensão emocional viva, como um gancho natural que conduz ao próximo conteúdo.
 
-⚠️ **Proibições obrigatórias**:
-- NÃO usar frases como "Em um rincón do universo...", "Hoje vamos falar sobre...", "Neste vídeo você verá...", "Prepare-se para...", "Acompanhe até o final", etc.
-- NÃO mencionar métodos, técnicas, marketing, ou conceitos metalinguísticos.
-- NÃO escrever de forma genérica, mística vaga, ou fantasiosa.
-- NÃO utilizar comandos ou chamadas diretas à ação.
+📌 Linguagem:
+- Escreva com frases fortes, curtas, emocionalmente vívidas e específicas.
+- Fale com **clareza**, **urgência emocional**, **sem abstrações**, **sem metáforas místicas** e **sem floreios poéticos genéricos**.
+- Parece uma conversa sincera com alguém que realmente precisa ouvir isso — e **não** uma abertura formal de vídeo.
 
-Use os tópicos abaixo como referência direta para construir uma abertura emocionalmente forte, **sem citá-los literalmente**:
+🚫 Proibições obrigatórias:
+- **NÃO** use frases como: “Neste vídeo você verá…”, “Hoje falaremos sobre…”, “Em um rincón do universo…”, “Prepare-se para…”, “Acompanhe até o final…”.
+- **NÃO** mencione técnicas, métodos, sistemas, estratégias, marketing, nem qualquer termo metalinguístico.
+- **NÃO** escreva de forma genérica, mística, vaga, motivacional de autoajuda ou fantasiosa.
+- **NÃO** finalize o texto com frases de encerramento. A introdução deve ser como um “gancho emocional” que leva direto para o primeiro tópico do vídeo.
+
+Use os tópicos abaixo como referência **sem copiá-los literalmente**, para construir uma introdução intensa e altamente persuasiva:
 
 Tópicos do Vídeo:
 {topicos}
 
 {instrucoes_idioma}
 
-📝 Crie agora a introdução: curta, impactante, emocionalmente envolvente e naturalmente fluida.
+📝 Crie agora a introdução: curta, impactante, emocionalmente envolvente, com promessa clara, sem encerramento explícito e com um gancho natural que leve ao primeiro conteúdo.
 """
+
 
 
     try:
         resposta = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.8,
         )

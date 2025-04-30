@@ -86,23 +86,25 @@ def gerar_conteudos_topicos(canal, video_id, log=print):
         prompt = f"""
 {idioma_instrucao}
 
-Você é um especialista em desenvolver conteúdos de altíssima qualidade para vídeos de YouTube, elaborados para criar uma forte conexão emocional e intelectual com o público, independentemente do tema (saúde, esportes, espiritualidade, finanças, desenvolvimento pessoal, entre outros).
+Você é um especialista em desenvolver conteúdos narrativos de altíssima qualidade para vídeos de YouTube, elaborados para criar uma forte conexão emocional e intelectual com o público, independentemente do tema (saúde, esportes, espiritualidade, finanças, desenvolvimento pessoal, entre outros).
 
 ⚡ Diretrizes obrigatórias:
+
 - O texto deve ser uma extensão contínua da base fornecida (não criar sensação de reinício nem introduções paralelas).
 - A linguagem deve ser intimista, concreta, emocionalmente vívida, falando diretamente ao espectador como se fosse um conselho único e pessoal.
-- Não utilizar expressões genéricas, metáforas vazias, clichês emocionais ou frases de transição ("vamos começar", "vem comigo", "fique até o final", etc.).
+- Não utilizar expressões genéricas, metáforas vazias, clichês emocionais ou frases de transição como ("vamos começar", "vem comigo", "fique até o final", "no próximo tópico", "no próximo tema", "em breve veremos", "logo exploraremos", etc.).
 - Proibido mencionar técnicas de escrita, marketing, roteirização ou qualquer referência metalinguística.
-- Proibido concluir o texto com tom de encerramento: o final deve ser fluido, aberto e naturalmente conduzir o espectador à continuidade do conteúdo.
-- Se existir um próximo tópico, você deve obrigatoriamente introduzir sutilmente o próximo assunto, utilizando o **resumo do próximo tópico**, de forma fluida, orgânica e quase imperceptível, como se o próximo tema surgisse naturalmente na narrativa.
-- Caso **não exista próximo tópico**, o texto deve apenas seguir fluido, sem conclusão explícita ou ruptura no tom emocional.
+- Proibido concluir o texto com tom de encerramento: o final deve ser fluido e naturalmente aberto, mantendo a atmosfera viva para o próximo trecho.
+- Importante: Você está construindo um único vídeo dividido em partes (tópicos), portanto, **NUNCA** finalize ideias como se fossem fechar o assunto ou concluir um raciocínio.
+- Também é proibido preparar o público explicitamente para o próximo tópico. Não faça previsões, chamadas ou antecipações forçadas. Mantenha a fluidez emocional contínua e natural.
 - Cada frase deve carregar peso emocional real, com força narrativa e elegância, evitando exageros, redundâncias ou qualquer quebra de atmosfera emocional.
+- Foque em agregar valor real ao telespectador em cada parágrafo, transmitindo autoridade, emoção e credibilidade.
 
 📜 Estrutura obrigatória baseada em frameworks de alta conversão:
+
 - **ATENCIÓN**: Capturar imediatamente a atenção emocional do espectador nos primeiros 5 segundos.
-- **INTERÉS**: Desenvolver uma conexão real, mostrando compreensão genuína das dores, desejos ou aspirações profundas do público.
-- **DESEO + AUTORIDAD**: Apresentar uma solução, caminho ou reflexão com credibilidade sólida e autoridade natural, sem arrogância.
-- **ACCIÓN**: Terminar de forma fluida, emocionalmente aberta e conectada organicamente à próxima temática (se existir).
+- **INTERÉS**: Desenvolver uma conexão genuína e profunda com os problemas, desejos ou aspirações do público.
+- **DESEO + AUTORIDAD**: Apresentar soluções, caminhos ou reflexões práticas com credibilidade natural, sem soar instrucional ou arrogante.
 
 ---
 
@@ -120,19 +122,19 @@ Novo Título do Tópico:
 Resumo do Novo Tópico:
 "{resumo_topico}"
 
-Resumo do Próximo Tópico (para transição sutil, se aplicável):
+Resumo do Próximo Tópico (para transição emocional natural, se aplicável):
 "{proximo_resumo}"
 
 {instrucoes_idioma}
 
-📝 Gere agora a continuação fluida, emocional, extremamente envolvente e conectada naturalmente com o próximo tema:
+📝 Gere agora a continuação fluida, emocional, extremamente envolvente e conectada naturalmente com o próximo tema, sem criar expectativas explícitas e sem finalizar o raciocínio:
 """
 
         try:
             resposta = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.8,
+                temperature=0.6,
             )
 
             conteudo_gerado = resposta.choices[0].message.content.strip()
