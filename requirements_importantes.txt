@@ -1,0 +1,6 @@
+🧠 Instale o PyTorch com suporte à sua GPU (ou CPU)
+Acesse https://pytorch.org/get-started/locally/ e copie o comando adequado à sua máquina.
+Por exemplo, se for CPU-only:
+
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
