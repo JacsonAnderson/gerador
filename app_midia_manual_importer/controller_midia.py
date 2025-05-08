@@ -2,6 +2,7 @@ import os
 import json
 import shutil
 import time
+import psutil
 from pathlib import Path
 from tkinter import Tk, filedialog
 from PIL import Image
@@ -12,6 +13,7 @@ import torch
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from sentence_transformers import SentenceTransformer
 from annoy import AnnoyIndex
+from sentence_transformers import util
 
 # Configurações
 EXTENSOES_IMAGEM = {".jpg", ".jpeg", ".png", ".webp"}
@@ -23,13 +25,20 @@ VECTOR_SIZE = 384
 
 # Modelos
 device = "cuda" if torch.cuda.is_available() else "cpu"
-blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base", use_fast=False)
-blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base").to(device)
+blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-large")
+blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-large").to(device)
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 def escolher_pasta():
     Tk().withdraw()
     return filedialog.askdirectory(title="Selecione uma pasta com mídias")
+
+def descansar(cpu_limite=85, pausa_segundos=3):
+    uso = psutil.cpu_percent(interval=1)
+    if uso >= cpu_limite:
+        print(f"⏳ CPU em {uso:.1f}%, aguardando {pausa_segundos}s para aliviar...")
+        time.sleep(pausa_segundos)
+
 
 def classificar_tipo(extensao):
     ext = extensao.lower()
@@ -61,15 +70,42 @@ def gerar_nome(subpasta, tipo, extensao):
     numero = len(existentes) + 1
     return f"{prefixo}_{numero:04d}{extensao}"
 
+def is_similar(new_text, textos_existentes, threshold=0.85):
+    if not textos_existentes:
+        return False
+    emb_novo = embedding_model.encode(new_text, convert_to_tensor=True).to(device)
+    emb_existentes = embedding_model.encode(textos_existentes, convert_to_tensor=True).to(device)
+    scores = util.cos_sim(emb_novo, emb_existentes)
+    return any(score.item() >= threshold for score in scores[0])
+
+
+
+def gerar_descricao_blip_pil(imagem_pil):
+    prompt = ("Describe this image in extreme detail. Include:"
+              " facial expressions, body language, number of people,"
+              " setting, lighting, clothing, background elements, mood,"
+              " emotions, objects, and any relevant actions. "
+              "Use complete sentences.")
+
+    inputs = blip_processor(images=imagem_pil, return_tensors="pt").to(device)
+    with torch.no_grad():
+        # Aqui: passamos `text=None` para ativar o modo de "captioning com contexto"
+        saida = blip_model.generate(
+            **inputs,
+            num_beams=10,
+            length_penalty=1.7,
+            max_new_tokens=150,
+            do_sample=False
+        )
+    # Agora o BLIP realmente gera a resposta — e não repete o prompt
+    descricao = blip_processor.decode(saida[0], skip_special_tokens=True).strip()
+    return descricao
+
+
+
 def gerar_descricao_blip_path(imagem_path):
     imagem = Image.open(imagem_path).convert("RGB")
     return gerar_descricao_blip_pil(imagem)
-
-def gerar_descricao_blip_pil(imagem_pil):
-    inputs = blip_processor(imagem_pil, return_tensors="pt").to(device)
-    with torch.no_grad():
-        saida = blip_model.generate(**inputs, max_new_tokens=50)
-    return blip_processor.decode(saida[0], skip_special_tokens=True).strip()
 
 def gerar_embedding(texto):
     return embedding_model.encode(texto)
@@ -98,33 +134,45 @@ def processar_video(origem, destino):
         container = av.open(str(origem))
         stream = container.streams.video[0]
         fps = float(stream.average_rate)
-        max_frames = int(fps * 8)
-        frames = []
-        frame_descricao = None
-        for i, frame in enumerate(container.decode(video=0)):
-            if i >= max_frames:
-                break
-            img = frame.to_ndarray(format="bgr24")
-            img = cv2.resize(img, RESOLUCAO_PADRAO, interpolation=cv2.INTER_AREA)
-            frames.append(img)
-            if i == int(fps * 2):
-                frame_descricao = img
+        duracao = float(container.duration * stream.time_base)
+        intervalo = 2  # segundos
+        proximo_tempo = 0
+        frames_descricao = []
+
         destino_temp = str(destino.with_suffix(".temp.mp4"))
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         out = cv2.VideoWriter(destino_temp, fourcc, fps, RESOLUCAO_PADRAO)
-        for f in frames:
-            out.write(f)
+
+        for frame in container.decode(video=0):
+            tempo_atual = frame.pts * stream.time_base
+            img = frame.to_ndarray(format="bgr24")
+            img = cv2.resize(img, RESOLUCAO_PADRAO, interpolation=cv2.INTER_AREA)
+            out.write(img)
+
+            if tempo_atual >= proximo_tempo:
+                img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+                descricao = gerar_descricao_blip_pil(img_pil)
+                frames_descricao.append(descricao)
+                proximo_tempo += intervalo
+
         out.release()
         shutil.move(destino_temp, destino)
-        if frame_descricao is not None:
-            img_pil = Image.fromarray(cv2.cvtColor(frame_descricao, cv2.COLOR_BGR2RGB))
-            descricao = gerar_descricao_blip_pil(img_pil)
-            salvar_json_e_npy(destino, descricao)
-            print(f"🎥 {destino.name} | {descricao}")
+
+        if frames_descricao:
+            descricao_final = []
+            for desc in frames_descricao:
+                if not is_similar(desc, descricao_final):
+                    descricao_final.append(desc)
+            descricao_texto = " ".join(descricao_final)
+            salvar_json_e_npy(destino, descricao_texto)
+            print(f"🎥 {destino.name} | {descricao_texto}")
+
         else:
-            print(f"⚠️ Nenhum frame disponível para descrição: {origem.name}")
+            print(f"⚠️ Nenhum frame útil encontrado para: {origem.name}")
+
     except Exception as e:
         print(f"❌ Erro vídeo {origem.name}: {e}")
+
 
 def copiar_arquivos(pasta_origem):
     arquivos = os.listdir(pasta_origem)
@@ -147,24 +195,22 @@ def copiar_arquivos(pasta_origem):
             processar_imagem(caminho, destino)
         elif tipo == "videos":
             processar_video(caminho, destino)
+
+        descansar()  # pausa curta após cada arquivo
+
+        if total % 10 == 0:
+            print("😮‍💨 Descanso maior de 10 segundos para resfriar CPU...")
+            time.sleep(10)
+
         total += 1
     print(f"\n📦 Total de mídias processadas e salvas: {total}")
 
 def rodar_indexador_annoy():
-    from annoy import AnnoyIndex
     BASE_DIR = Path("data_midia")
     INDEX_DIR = BASE_DIR / "index_annoy"
     INDEX_DIR.mkdir(parents=True, exist_ok=True)
     MAP_FILE = INDEX_DIR / "index_map.json"
     ANNOY_FILE = INDEX_DIR / "index.ann"
-    EXTENSOES_IMAGEM = {".jpg", ".jpeg", ".png", ".webp"}
-    EXTENSOES_VIDEO = {".mp4", ".webm", ".mov", ".mkv"}
-
-    def carregar_index():
-        if MAP_FILE.exists():
-            with open(MAP_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        return {}
 
     def salvar_index(index_map):
         with open(MAP_FILE, "w", encoding="utf-8") as f:
@@ -179,8 +225,6 @@ def rodar_indexador_annoy():
                 if not arquivo.is_file():
                     continue
                 if arquivo.suffix.lower() not in EXTENSOES_IMAGEM.union(EXTENSOES_VIDEO):
-                    continue
-                if any(str(arquivo.resolve()) == v["caminho"] for v in index_map.values()):
                     continue
                 json_path = arquivo.with_suffix(".json")
                 npy_path = arquivo.with_suffix(".npy")
@@ -200,28 +244,30 @@ def rodar_indexador_annoy():
                     "caminho": str(arquivo.resolve()),
                     "descricao": descricao
                 }
+                print(f"🔄 Adicionado ID {proximo_id}: {arquivo.name}")
                 proximo_id += 1
         return proximo_id
 
-    print("\n🔍 Iniciando geração de index ANN...")
-    index_map = carregar_index()
-    proximo_id = max([int(k) for k in index_map.keys()], default=-1) + 1
+    print("\n🔍 Reconstruindo o índice do zero...")
+    index_map = {}  # <-- zera tudo
+    proximo_id = 0
     annoy_index = AnnoyIndex(VECTOR_SIZE, "angular")
     proximo_id = processar_midia(BASE_DIR / "imagens", "imagem", index_map, annoy_index, proximo_id)
     proximo_id = processar_midia(BASE_DIR / "videos", "video", index_map, annoy_index, proximo_id)
     if annoy_index.get_n_items() > 0:
         annoy_index.build(10)
         annoy_index.save(str(ANNOY_FILE))
-        print(f"✅ Index salvo em: {ANNOY_FILE}")
+        print(f"✅ Index reconstruído com sucesso. Total: {annoy_index.get_n_items()} itens.")
     else:
-        print("⚠️ Nenhum vetor adicionado.")
+        print("⚠️ Nenhum vetor foi adicionado.")
     salvar_index(index_map)
+
 
 def iniciar_importador():
     pasta = escolher_pasta()
     if pasta:
         copiar_arquivos(pasta)
         rodar_indexador_annoy()
-
+        
 if __name__ == "__main__":
     iniciar_importador()

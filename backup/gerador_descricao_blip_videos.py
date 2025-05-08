@@ -6,19 +6,28 @@ import torch
 import av
 from transformers import BlipProcessor, BlipForConditionalGeneration
 
-# Inicializa modelo BLIP
-device = "cuda" if torch.cuda.is_available() else "cpu"
-processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base").to(device)
+# ✅ Configuração do modelo
+USE_MODEL_LARGE = True  # ⬅️ Troque para False se quiser usar o modelo base (mais leve)
 
-# Configurações
+MODEL_NAME = (
+    "Salesforce/blip-image-captioning-large"
+    if USE_MODEL_LARGE
+    else "Salesforce/blip-image-captioning-base"
+)
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+processor = BlipProcessor.from_pretrained(MODEL_NAME)
+model = BlipForConditionalGeneration.from_pretrained(MODEL_NAME).to(device)
+
+# 📁 Configurações
 PASTA_BASE = Path("data_midia")
 PAUSA_ENTRE_EXECUCOES = 3  # segundos
 
 def gerar_descricao_blip(imagem_pil):
-    inputs = processor(imagem_pil, return_tensors="pt").to(device)
+    prompt = "Describe this image in detail, including emotions, colors, objects, actions, setting and atmosphere:"
+    inputs = processor(images=imagem_pil, text=prompt, return_tensors="pt").to(device)
     with torch.no_grad():
-        saida = model.generate(**inputs, max_new_tokens=50)
+        saida = model.generate(**inputs, max_new_tokens=80)  # pode ajustar esse valor
     return processor.decode(saida[0], skip_special_tokens=True).strip()
 
 def processar_imagem_ou_video(arquivo_path: Path):
@@ -65,4 +74,5 @@ def processar_toda_midia():
                 total += 1
     print(f"\n✅ Total de mídias processadas com descrição: {total}")
 
+# 🚀 Inicia o processo
 processar_toda_midia()
