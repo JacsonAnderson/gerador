@@ -30,8 +30,8 @@ blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 def escolher_pasta():
-    Tk().withdraw()
-    return filedialog.askdirectory(title="Selecione uma pasta com mídias")
+    return str(Path(__file__).resolve().parent.parent / "midias_temporais")
+
 
 def descansar(cpu_limite=85, pausa_segundos=3):
     uso = psutil.cpu_percent(interval=1)
@@ -81,25 +81,22 @@ def is_similar(new_text, textos_existentes, threshold=0.85):
 
 
 def gerar_descricao_blip_pil(imagem_pil):
-    prompt = ("Describe this image in extreme detail. Include:"
-              " facial expressions, body language, number of people,"
-              " setting, lighting, clothing, background elements, mood,"
-              " emotions, objects, and any relevant actions. "
-              "Use complete sentences.")
-
+    prompt = (
+        "Describe this scene briefly. Focus on the main subject, visible objects, actions, and the setting. "
+        "Avoid unnecessary details. Respond in one short sentence."
+    )
     inputs = blip_processor(images=imagem_pil, return_tensors="pt").to(device)
     with torch.no_grad():
-        # Aqui: passamos `text=None` para ativar o modo de "captioning com contexto"
         saida = blip_model.generate(
             **inputs,
-            num_beams=10,
-            length_penalty=1.7,
-            max_new_tokens=150,
+            num_beams=5,
+            length_penalty=0.8,
+            max_new_tokens=30,
             do_sample=False
         )
-    # Agora o BLIP realmente gera a resposta — e não repete o prompt
     descricao = blip_processor.decode(saida[0], skip_special_tokens=True).strip()
     return descricao
+
 
 
 
@@ -262,12 +259,25 @@ def rodar_indexador_annoy():
         print("⚠️ Nenhum vetor foi adicionado.")
     salvar_index(index_map)
 
+def limpar_midias_temporais():
+    pasta = Path(__file__).resolve().parent.parent / "midias_temporais"
+    if not pasta.exists():
+        return
+    for arquivo in pasta.iterdir():
+        try:
+            if arquivo.is_file():
+                arquivo.unlink()
+        except Exception as e:
+            print(f"❌ Erro ao apagar {arquivo.name}: {e}")
+    print("🧹 Pasta midias_temporais limpa.")
+
 
 def iniciar_importador():
     pasta = escolher_pasta()
     if pasta:
         copiar_arquivos(pasta)
         rodar_indexador_annoy()
+        limpar_midias_temporais()
         
 if __name__ == "__main__":
     iniciar_importador()

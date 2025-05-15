@@ -1,5 +1,7 @@
 import os
 import sys
+import subprocess
+
 from pathlib import Path
 
 # Adiciona o diretório raiz ao sys.path
@@ -7,6 +9,13 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from app_gerador_de_video.whisperx_analisador import transcrever_com_whisperx
 from app_gerador_de_video.gerador_descricao_chave import processar_segmentos
+
+# Novo import para preenchimento de nome_midia
+from app_gerador_de_video.preencher_nome_midia import preencher_segmentos_json
+
+from app_midia_manual_importer.controller_midia import iniciar_importador
+
+
 
 DATA_DIR = "data"
 AUDIO_FILE_NAME = "narracao.wav"
@@ -67,6 +76,38 @@ def processar_videos():
             # Geração de descrições visuais
             log_callback("🔎 Gerando descrições visuais dos segmentos...")
             processar_segmentos(segmentos_path)
+
+            # Preenchimento automático de nome_midia com busca semântica
+            log_callback("🔗 Buscando mídias semelhantes para os segmentos...")
+
+            index_file = Path("data_midia/index_annoy/index.ann")
+            if not index_file.exists():
+                log_callback("⚙️ Índice Annoy não encontrado. Reconstruindo...")
+                iniciar_importador()
+
+            preencher_segmentos_json(segmentos_path)
+
+
+            # Verifica se há faltando_midias.json e ainda não baixamos os previews
+            faltando_path = control_path / "faltando_midias.json"
+            flag_baixado = control_path / "midias_ja_baixadas.txt"
+
+            if faltando_path.exists() and not flag_baixado.exists():
+                log_callback("📥 Baixando mídias automaticamente via Storyblocks...")
+                subprocess.run([
+                sys.executable,
+                "app_gerador_de_video/downloader_midias_storyblocks.py",
+                str(faltando_path)
+            ])
+
+            # Após baixar, importar e indexar
+                log_callback("📂 Processando e indexando mídias baixadas...")
+                iniciar_importador()
+
+                # Marca como baixado
+                with open(flag_baixado, "w") as f:
+                    f.write("✅ Mídias baixadas e processadas.\n")
+
 
             # Aqui entrará a montagem do vídeo futuramente...
 
