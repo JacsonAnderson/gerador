@@ -4,11 +4,11 @@ import ttkbootstrap as tb
 import threading
 from ttkbootstrap.constants import *
 
-
+# Aqui estão os modais para funcionar a interface
 from modal_criar_canal import abrir_modal_criar_canal
 from modal_adicionar_videos import abrir_modal_adicionar_videos
 
-
+#Aqui estão todos os modulos que trabalham automaticamente
 from app_roteiro import controller_roteiro
 
 
@@ -55,8 +55,6 @@ class GeradorDeVideosApp:
             command=lambda: abrir_modal_adicionar_videos(self.root)
         ).pack(pady=(0, 10), fill=X)
 
-
-
         # Botões centrais
         self.buttons_frame = ttk.Frame(self.main_frame)
         self.buttons_frame.pack(anchor="center", pady=(20, 30))
@@ -72,6 +70,16 @@ class GeradorDeVideosApp:
 
             ttk.Button(self.buttons_frame, text=nome, command=action, **self.botao_style).grid(row=0, column=i, padx=10)
 
+
+        # Botão central "VideoForge"
+        self.videoforge_button = ttk.Button(
+            self.main_frame,
+            text="VideoForge",
+            bootstyle="info",
+            width=25,
+            command=lambda: self.add_log("Botão VideoForge clicado")
+        )
+        self.videoforge_button.pack(pady=(5, 10))
 
 
         # Logs inferiores
