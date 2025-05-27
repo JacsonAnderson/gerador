@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+import time
 
 from pathlib import Path
 
@@ -14,6 +15,8 @@ from app_gerador_de_video.gerador_descricao_chave import processar_segmentos
 from app_gerador_de_video.preencher_nome_midia import preencher_segmentos_json
 
 from app_midia_manual_importer.controller_midia import iniciar_importador
+from app_gerador_de_video.preencher_segmentos_obrigatorio import preencher_segmentos_obrigatorio
+
 
 
 
@@ -95,18 +98,23 @@ def processar_videos():
             if faltando_path.exists() and not flag_baixado.exists():
                 log_callback("📥 Baixando mídias automaticamente via Storyblocks...")
                 subprocess.run([
-                sys.executable,
-                "app_gerador_de_video/downloader_midias_storyblocks.py",
-                str(faltando_path)
-            ])
+                    sys.executable,
+                    "app_gerador_de_video/downloader_midias_storyblocks.py",
+                    str(faltando_path)
+                ])
 
-            # Após baixar, importar e indexar
+                log_callback("⏳ Aguardando liberação dos arquivos...")
+                time.sleep(3)
+
+                # Após baixar, importar e indexar
                 log_callback("📂 Processando e indexando mídias baixadas...")
                 iniciar_importador()
 
                 # Marca como baixado
-                with open(flag_baixado, "w") as f:
-                    f.write("✅ Mídias baixadas e processadas.\n")
+                with open(flag_baixado, "w", encoding="utf-8", errors="ignore") as f:
+                    f.write("Mídias baixadas e processadas.\n")  # Evita emoji!
+
+            preencher_segmentos_obrigatorio(segmentos_path)
 
 
             # Aqui entrará a montagem do vídeo futuramente...

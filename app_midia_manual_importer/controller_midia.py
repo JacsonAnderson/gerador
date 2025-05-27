@@ -2,6 +2,8 @@ import os
 import json
 import shutil
 import time
+import msvcrt
+import subprocess
 import psutil
 from pathlib import Path
 from tkinter import Tk, filedialog
@@ -259,17 +261,63 @@ def rodar_indexador_annoy():
         print("⚠️ Nenhum vetor foi adicionado.")
     salvar_index(index_map)
 
+def aguardar_liberacao(arquivo_path, tentativas=5, delay=2):
+    """Tenta abrir o arquivo com exclusividade até conseguir ou atingir o limite."""
+    for _ in range(tentativas):
+        try:
+            with open(arquivo_path, "r+b") as f:
+                msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+                msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+            return True
+        except (PermissionError, OSError):
+            time.sleep(delay)
+    return False
+
+def remover_forcado_cmd(caminho: Path):
+    try:
+        subprocess.run(
+            ["cmd", "/c", "del", "/f", "/q", str(caminho)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            shell=True
+        )
+        if not caminho.exists():
+            print(f"💣 Forçado e deletado: {caminho.name}")
+        else:
+            print(f"⛔ Ainda não foi possível deletar: {caminho.name}")
+    except Exception as e:
+        print(f"❌ Erro na exclusão forçada de {caminho.name}: {e}")
+
+
 def limpar_midias_temporais():
     pasta = Path(__file__).resolve().parent.parent / "midias_temporais"
     if not pasta.exists():
         return
+
+    arquivos_falhados = []
+
     for arquivo in pasta.iterdir():
         try:
             if arquivo.is_file():
                 arquivo.unlink()
         except Exception as e:
             print(f"❌ Erro ao apagar {arquivo.name}: {e}")
-    print("🧹 Pasta midias_temporais limpa.")
+            arquivos_falhados.append(arquivo)
+
+    if arquivos_falhados:
+        print("⏳ Verificando arquivos em uso antes de tentar apagar novamente...")
+        for arquivo in arquivos_falhados:
+            if aguardar_liberacao(arquivo):
+                try:
+                    arquivo.unlink()
+                    print(f"✅ Apagado após liberação: {arquivo.name}")
+                except Exception:
+                    remover_forcado_cmd(arquivo)
+            else:
+                remover_forcado_cmd(arquivo)
+
+
+
 
 
 def iniciar_importador():
