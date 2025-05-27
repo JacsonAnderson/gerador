@@ -8,9 +8,6 @@ from ttkbootstrap.constants import *
 from modal_criar_canal import abrir_modal_criar_canal
 from modal_adicionar_videos import abrir_modal_adicionar_videos
 
-#Aqui estão todos os modulos que trabalham automaticamente
-from app_roteiro import controller_roteiro
-
 
 class GeradorDeVideosApp:
     def __init__(self, root):
@@ -28,7 +25,7 @@ class GeradorDeVideosApp:
         # Sidebar mais larga com padding
         self.sidebar = ttk.Frame(self.container, width=150, style="secondary.TFrame", padding=(20, 30))
         self.sidebar.pack(side=LEFT, fill=Y)
-        self.sidebar.pack_propagate(False)  # Impede a sidebar de encolher com o conteúdo
+        self.sidebar.pack_propagate(False)
 
         # Linha divisória
         self.divider = ttk.Separator(self.container, orient=VERTICAL)
@@ -38,7 +35,7 @@ class GeradorDeVideosApp:
         self.main_frame = ttk.Frame(self.container, padding=20)
         self.main_frame.pack(side=LEFT, fill=BOTH, expand=True)
 
-        # Título da sidebar (centralizado)
+        # Título da sidebar
         ttk.Label(self.sidebar, text="Menu", style="TLabel", anchor="center", font=("Segoe UI", 12, "bold")).pack(pady=(0, 20))
 
         ttk.Button(
@@ -64,12 +61,11 @@ class GeradorDeVideosApp:
         nomes_botoes = ["Gerar Roteiro", "Botão 2", "Botão 3", "Botão 4"]
         for i, nome in enumerate(nomes_botoes):
             if nome == "Gerar Roteiro":
-                action = lambda: threading.Thread(target=controller_roteiro.iniciar_controller, daemon=True).start()
+                action = lambda: threading.Thread(target=self.gerar_roteiro, daemon=True).start()
             else:
                 action = lambda: self.add_log(f"Botão {nome} clicado")
 
             ttk.Button(self.buttons_frame, text=nome, command=action, **self.botao_style).grid(row=0, column=i, padx=10)
-
 
         # Botão central "VideoForge"
         self.videoforge_button = ttk.Button(
@@ -80,7 +76,6 @@ class GeradorDeVideosApp:
             command=lambda: self.add_log("Botão VideoForge clicado")
         )
         self.videoforge_button.pack(pady=(5, 10))
-
 
         # Logs inferiores
         self.logs_frame = ttk.Frame(self.main_frame)
@@ -93,12 +88,17 @@ class GeradorDeVideosApp:
 
         self.add_log("Aplicação iniciada...")
 
+    # Vamos seguir essa mesma lógica nos outros processos para otimizar a inicialização do aplicativo,
+    # importando os módulos apenas quando forem realmente necessários, ou seja, somente ao clicarmos no botão correspondente.
+    def gerar_roteiro(self):
+        from app_roteiro import controller_roteiro
         controller_roteiro.set_logger(self.add_log)
-
+        controller_roteiro.iniciar_controller()
 
     def add_log(self, message):
         self.log_text.insert(tk.END, f"{message}\n")
         self.log_text.see(tk.END)
+
 
 if __name__ == "__main__":
     root = tb.Window(themename="darkly")
