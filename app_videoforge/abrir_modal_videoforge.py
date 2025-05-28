@@ -3,6 +3,8 @@ from tkinter import ttk, messagebox
 import ttkbootstrap as tb
 import sqlite3
 from pathlib import Path
+import threading
+
 
 DB_CHANNELS = Path("data/channels.db")
 DB_VIDEOS = Path("data/videos.db")
@@ -70,23 +72,30 @@ def abrir_modal_videoforge(janela_pai, callback_executar_controller):
             if not canal or not video_id:
                 messagebox.showerror("Erro", "Selecione um canal e um vídeo.")
                 return
-            callback_executar_controller(modo="video", canal=canal, video_id=video_id)
+            threading.Thread(target=callback_executar_controller, kwargs={
+                "modo": "video", "canal": canal, "video_id": video_id
+            }).start()
 
         elif modo == "canal":
             canal = canal_dropdown_canal.get()
             if not canal:
                 messagebox.showerror("Erro", "Selecione um canal.")
                 return
-            callback_executar_controller(modo="canal", canal=canal)
+            threading.Thread(target=callback_executar_controller, kwargs={
+                "modo": "canal", "canal": canal
+            }).start()
 
         elif modo == "todos":
-            callback_executar_controller(modo="todos")
+            threading.Thread(target=callback_executar_controller, kwargs={
+                "modo": "todos"
+            }).start()
 
         else:
             messagebox.showerror("Erro", "Selecione uma opção de execução.")
             return
 
         modal.destroy()
+
 
     ttk.Button(frame, text="Iniciar", bootstyle="success", command=iniciar).pack(pady=10)
     ttk.Button(frame, text="Cancelar", command=modal.destroy).pack()
