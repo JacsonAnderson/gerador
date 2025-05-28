@@ -13,20 +13,32 @@ CHANNELS_DB_PATH = Path("data/channels.db")
 def verificar_ou_criar_videos_db():
     if not VIDEOS_DB_PATH.exists():
         VIDEOS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(VIDEOS_DB_PATH) as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS videos (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    canal TEXT NOT NULL,
-                    video_id TEXT NOT NULL,
-                    link TEXT,
-                    roteiro_ok INTEGER DEFAULT 0,
-                    roteiro_data TEXT,
-                    criado_em TEXT
-                );
-            """)
-            conn.commit()
+
+    with sqlite3.connect(VIDEOS_DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS videos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            canal TEXT NOT NULL,
+            video_id TEXT NOT NULL,
+            link TEXT,
+            roteiro_ok INTEGER DEFAULT 0,
+            audio_ok INTEGER DEFAULT 0,
+            legenda_ok INTEGER DEFAULT 0,
+            metadado_ok INTEGER DEFAULT 0,
+            thumb_ok INTEGER DEFAULT 0,
+            estado INTEGER DEFAULT 0,
+            roteiro_data TEXT,
+            audio_data TEXT,
+            legenda_data TEXT,
+            metadado_data TEXT,
+            thumb_data TEXT,
+            criado_em TEXT,
+            configs TEXT
+        );
+    """)
+
+        conn.commit()
 
 def obter_lista_canais():
     canais = []
@@ -37,7 +49,14 @@ def obter_lista_canais():
             canais = [row[0] for row in cursor.fetchall()]
     return canais
 
-def abrir_modal_adicionar_videos(janela_pai):
+def obter_configs_do_canal(canal_nome):
+    with sqlite3.connect(CHANNELS_DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT configs FROM canais WHERE nome = ?", (canal_nome,))
+        row = cursor.fetchone()
+        return row[0] if row else "{}"
+
+def abrir_modal_adicionar_videos(janela_pai, callback_atualizar_lista=None):
     verificar_ou_criar_videos_db()
 
     modal = tb.Toplevel(janela_pai)
@@ -89,6 +108,8 @@ def abrir_modal_adicionar_videos(janela_pai):
             messagebox.showwarning("Atenção", "Preencha todos os links.")
             return
 
+        configs_canal = obter_configs_do_canal(canal)
+
         canal_path = os.path.join("data", canal)
         os.makedirs(canal_path, exist_ok=True)
 
@@ -117,20 +138,28 @@ def abrir_modal_adicionar_videos(janela_pai):
                     json.dump(metadados, f, indent=4)
 
                 cursor.execute("""
-                    INSERT INTO videos (canal, video_id, link, roteiro_ok, roteiro_data, criado_em)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO videos (
+                        canal, video_id, link,
+                        roteiro_ok, audio_ok, legenda_ok, metadado_ok, thumb_ok,
+                        estado,
+                        roteiro_data, audio_data, legenda_data, metadado_data, thumb_data,
+                        criado_em, configs
+                    )
+                    VALUES (?, ?, ?, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL, NULL, ?, ?)
                 """, (
                     canal,
                     numero_video,
                     link,
-                    0,
-                    None,
-                    datetime.now().isoformat()
+                    datetime.now().isoformat(),
+                    configs_canal
                 ))
+
 
             conn.commit()
 
         messagebox.showinfo("Sucesso", "Vídeos adicionados com sucesso.")
+        if callback_atualizar_lista:
+            callback_atualizar_lista()
         modal.destroy()
 
     ttk.Button(modal, text="Adicionar Vídeos", bootstyle="success", command=salvar).pack(pady=10)

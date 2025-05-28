@@ -5,48 +5,52 @@ from pathlib import Path
 from tkinter import ttk
 import ttkbootstrap as tb
 from modal_configurar_canal import abrir_modal_configurar_canal
+from modal_lista_videos_por_canal import abrir_modal_lista_videos_por_canal
 
 DB_PATH = Path("data/channels.db")
+VIDEOS_DB_PATH = Path("data/videos.db")
+
+def obter_contagem_videos(canal_nome):
+    if not VIDEOS_DB_PATH.exists():
+        return 0, 0
+
+    with sqlite3.connect(VIDEOS_DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT estado FROM videos WHERE canal = ?", (canal_nome,))
+        estados = [row[0] for row in cursor.fetchall()]
+        total = len(estados)
+        pendentes = len([e for e in estados if e != 7])
+        return pendentes, total
 
 def criar_lista_canais(container):
     for widget in container.winfo_children():
         widget.destroy()
 
-    # Frame externo que se expande
     outer_frame = ttk.Frame(container)
     outer_frame.pack(fill="both", expand=True)
 
-    # Canvas e Scrollbar
     canvas = tk.Canvas(outer_frame, borderwidth=0, highlightthickness=0)
     scrollbar = ttk.Scrollbar(outer_frame, orient="vertical", command=canvas.yview)
 
-    # Scroll Frame interno
     scroll_frame = ttk.Frame(canvas)
-    scroll_frame.bind(
-        "<Configure>",
-        lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-    )
+    scroll_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
 
     canvas_frame = canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
 
-    # Permitir expansão total na horizontal
     def expandir_horizontal(event):
         canvas.itemconfig(canvas_frame, width=event.width)
 
     canvas.bind("<Configure>", expandir_horizontal)
 
-    # Scroll mouse
     def _on_mousewheel(event):
         canvas.yview_scroll(-1 * int(event.delta / 120), "units")
 
     scroll_frame.bind_all("<MouseWheel>", _on_mousewheel)
 
-    # Pack canvas e scrollbar
     canvas.pack(side="left", fill="both", expand=True)
     scrollbar.pack(side="right", fill="y")
     canvas.configure(yscrollcommand=scrollbar.set)
 
-    # Banco de dados
     if not DB_PATH.exists():
         mostrar_mensagem_boas_vindas(scroll_frame)
         return
@@ -61,13 +65,7 @@ def criar_lista_canais(container):
         return
 
     for canal_id, nome, caminho_videos in canais:
-        caminho_videos = Path(caminho_videos)
-        total_pendentes = 0
-        if caminho_videos.exists():
-            total_pendentes = len([
-                pasta for pasta in caminho_videos.iterdir()
-                if pasta.is_dir() and (pasta / "control").exists() and not (pasta / "control" / "roteiro_pronto.txt").exists()
-            ])
+        pendentes, total = obter_contagem_videos(nome)
 
         frame = ttk.Frame(scroll_frame, padding=(10, 4), style="secondary.TFrame")
         frame.pack(fill="x", pady=2, padx=5)
@@ -76,10 +74,27 @@ def criar_lista_canais(container):
         info_frame.pack(side="left", fill="x", expand=True)
 
         ttk.Label(info_frame, text=nome, font=("Segoe UI", 10, "bold")).pack(anchor="w")
-        ttk.Label(info_frame, text=f"Vídeos pendentes: {total_pendentes}", font=("Segoe UI", 9)).pack(anchor="w")
+        ttk.Label(info_frame, text=f"🎯 Pendentes: {pendentes} | 📦 Total: {total}", font=("Segoe UI", 9)).pack(anchor="w")
+
+        botoes_frame = ttk.Frame(frame)
+        botoes_frame.pack(side="right")
 
         ttk.Button(
-            frame,
+            botoes_frame,
+            text="📂 Ver Vídeos",
+            bootstyle="warning-outline",
+            width=13,
+            command=lambda n=nome: abrir_modal_lista_videos_por_canal(
+                janela_pai=container.winfo_toplevel(),
+                canal_nome=n,
+                callback_atualizar_canais=lambda: criar_lista_canais(container)
+            )
+
+
+        ).pack(side="left", padx=2, pady=2)
+
+        ttk.Button(
+            botoes_frame,
             text="⚙ Configurar",
             bootstyle="info-outline",
             width=13,
@@ -88,7 +103,7 @@ def criar_lista_canais(container):
                 canal_id=c,
                 callback_atualizar_lista=lambda: criar_lista_canais(container)
             )
-        ).pack(side="right", padx=5, pady=5)
+        ).pack(side="left", padx=2, pady=2)
 
 
 def mostrar_mensagem_boas_vindas(frame_destino):

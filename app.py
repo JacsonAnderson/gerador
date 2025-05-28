@@ -48,7 +48,7 @@ class GeradorDeVideosApp:
             self.sidebar, 
             text="Adicionar Vídeos", 
             bootstyle="secondary-outline", 
-            command=lambda: abrir_modal_adicionar_videos(self.root)
+            command=lambda: abrir_modal_adicionar_videos(self.root, callback_atualizar_lista=self.atualizar_lista_canais)
         ).pack(pady=(0, 10), fill=X)
 
         # Botões centrais
@@ -113,4 +113,6 @@ class GeradorDeVideosApp:
 if __name__ == "__main__":
     root = tb.Window(themename="darkly")
     app = GeradorDeVideosApp(root)
+    global app_ref
+    app_ref = app
     root.mainloop()
