@@ -5,8 +5,8 @@ import sqlite3
 import tkinter as tk
 from tkinter import ttk, messagebox
 import ttkbootstrap as tb
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 from app_roteiro.modulo_idioma import IDIOMAS_SUPORTADOS
 
 DB_PATH = Path("data/channels.db")
@@ -25,7 +25,8 @@ def verificar_e_criar_db():
                     ativo INTEGER DEFAULT 1,
                     caminho_videos TEXT,
                     roteiros_gerados INTEGER DEFAULT 0,
-                    data_criacao TEXT
+                    data_criacao TEXT,
+                    configs TEXT
                 );
             """)
             conn.commit()
@@ -90,6 +91,18 @@ def abrir_modal_criar_canal(janela_pai, callback_atualizar_lista=None):
         caminho_prompts = pasta_canal / "prompts.json"
         data_criacao = datetime.now().isoformat()
 
+        # Configurações padrão ocultas (sem idioma duplicado)
+        configs_ocultas = {
+            "gerar_roteiro": True,
+            "gerar_audio": False,
+            "audio_manual": True,
+            "gerar_video": True,
+            "gerar_legendas": True,
+            "gerar_metadados": True,
+            "gerar_thumb": True,
+            "thumb_manual": False
+        }
+
         try:
             with sqlite3.connect(DB_PATH) as conn:
                 cursor = conn.cursor()
@@ -102,8 +115,8 @@ def abrir_modal_criar_canal(janela_pai, callback_atualizar_lista=None):
                     INSERT INTO canais (
                         id, nome, idioma, marca_dagua,
                         ativo, caminho_videos,
-                        roteiros_gerados, data_criacao
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        roteiros_gerados, data_criacao, configs
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     canal_id,
                     nome,
@@ -112,7 +125,8 @@ def abrir_modal_criar_canal(janela_pai, callback_atualizar_lista=None):
                     1,
                     str(pasta_canal),
                     0,
-                    data_criacao
+                    data_criacao,
+                    json.dumps(configs_ocultas)
                 ))
                 conn.commit()
 

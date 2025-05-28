@@ -22,7 +22,7 @@ class GeradorDeVideosApp:
         self.container.pack(fill=BOTH, expand=True)
 
         # Sidebar
-        self.sidebar = ttk.Frame(self.container, width=150, style="secondary.TFrame", padding=(20, 30))
+        self.sidebar = ttk.Frame(self.container, width=150, style="secondary.TFrame", padding=(5, 30))
         self.sidebar.pack(side=LEFT, fill=Y)
         self.sidebar.pack_propagate(False)
 

@@ -1,21 +1,51 @@
 import os
 import json
+import sqlite3
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 import ttkbootstrap as tb
-from tkinter import messagebox
 from datetime import datetime
+from pathlib import Path
 
+VIDEOS_DB_PATH = Path("data/videos.db")
+CHANNELS_DB_PATH = Path("data/channels.db")
+
+def verificar_ou_criar_videos_db():
+    if not VIDEOS_DB_PATH.exists():
+        VIDEOS_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with sqlite3.connect(VIDEOS_DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS videos (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    canal TEXT NOT NULL,
+                    video_id TEXT NOT NULL,
+                    link TEXT,
+                    roteiro_ok INTEGER DEFAULT 0,
+                    roteiro_data TEXT,
+                    criado_em TEXT
+                );
+            """)
+            conn.commit()
+
+def obter_lista_canais():
+    canais = []
+    if CHANNELS_DB_PATH.exists():
+        with sqlite3.connect(CHANNELS_DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT nome FROM canais ORDER BY nome ASC")
+            canais = [row[0] for row in cursor.fetchall()]
+    return canais
 
 def abrir_modal_adicionar_videos(janela_pai):
+    verificar_ou_criar_videos_db()
+
     modal = tb.Toplevel(janela_pai)
     modal.title("Adicionar Vídeos")
     modal.geometry("600x500")
     modal.grab_set()
 
-    canais_disponiveis = [
-        f.replace(".json", "") for f in os.listdir("db/canais") if f.endswith(".json")
-    ]
+    canais_disponiveis = obter_lista_canais()
 
     if not canais_disponiveis:
         messagebox.showerror("Erro", "Nenhum canal encontrado.")
@@ -49,7 +79,7 @@ def abrir_modal_adicionar_videos(janela_pai):
             entries.append(entry)
 
     qtd_var.trace_add("write", gerar_campos_links)
-    gerar_campos_links()  # inicializa com 1 campo
+    gerar_campos_links()
 
     def salvar():
         canal = canal_var.get()
@@ -62,27 +92,43 @@ def abrir_modal_adicionar_videos(janela_pai):
         canal_path = os.path.join("data", canal)
         os.makedirs(canal_path, exist_ok=True)
 
-        # Verifica qual o próximo número disponível
         existentes = [int(p) for p in os.listdir(canal_path) if p.isdigit()]
         proximo_id = max(existentes, default=0) + 1
 
-        for i, link in enumerate(links):
-            numero_video = str(proximo_id + i).zfill(3)
-            video_path = os.path.join(canal_path, numero_video)
+        with sqlite3.connect(VIDEOS_DB_PATH) as conn:
+            cursor = conn.cursor()
 
-            if os.path.exists(video_path):
-                messagebox.showwarning("Atenção", f"O vídeo {numero_video} já existe. Pulando.")
-                continue
+            for i, link in enumerate(links):
+                numero_video = str(proximo_id + i).zfill(3)
+                video_path = os.path.join(canal_path, numero_video)
 
-            os.makedirs(os.path.join(video_path, "control"), exist_ok=True)
+                if os.path.exists(video_path):
+                    messagebox.showwarning("Atenção", f"O vídeo {numero_video} já existe. Pulando.")
+                    continue
 
-            metadados = {
-                "link": link,
-                "adicionado_em": datetime.now().isoformat()
-            }
+                os.makedirs(os.path.join(video_path, "control"), exist_ok=True)
 
-            with open(os.path.join(video_path, "control", "metadados.json"), "w", encoding="utf-8") as f:
-                json.dump(metadados, f, indent=4)
+                metadados = {
+                    "link": link,
+                    "adicionado_em": datetime.now().isoformat()
+                }
+
+                with open(os.path.join(video_path, "control", "metadados.json"), "w", encoding="utf-8") as f:
+                    json.dump(metadados, f, indent=4)
+
+                cursor.execute("""
+                    INSERT INTO videos (canal, video_id, link, roteiro_ok, roteiro_data, criado_em)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    canal,
+                    numero_video,
+                    link,
+                    0,
+                    None,
+                    datetime.now().isoformat()
+                ))
+
+            conn.commit()
 
         messagebox.showinfo("Sucesso", "Vídeos adicionados com sucesso.")
         modal.destroy()
