@@ -6,6 +6,7 @@ from tkinter import ttk, messagebox, simpledialog
 import ttkbootstrap as tb
 from pathlib import Path
 from app_roteiro.modulo_idioma import IDIOMAS_SUPORTADOS
+from modal_configuracoes_avancadas import abrir_modal_configuracoes_avancadas
 
 DB_PATH = Path("data/channels.db")
 
@@ -34,7 +35,7 @@ def abrir_modal_configurar_canal(janela_pai, canal_id, callback_atualizar_lista=
 
     modal = tb.Toplevel(janela_pai)
     modal.title(f"Configurar Canal - {nome}")
-    modal.geometry("700x750")
+    modal.geometry("700x800")
     modal.grab_set()
 
     def adicionar_label(texto):
@@ -122,3 +123,4 @@ def abrir_modal_configurar_canal(janela_pai, canal_id, callback_atualizar_lista=
 
     ttk.Button(modal, text="Salvar Alterações", bootstyle="success", command=salvar).pack(pady=10)
     ttk.Button(modal, text="Excluir Canal", bootstyle="danger-outline", command=excluir).pack(pady=10)
+    ttk.Button(modal, text="Configurações Avançadas", bootstyle="secondary", command=lambda: abrir_modal_configuracoes_avancadas(modal, canal_id, modal.destroy)).pack(pady=10)
