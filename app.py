@@ -72,7 +72,7 @@ class GeradorDeVideosApp:
             text="VideoForge",
             bootstyle="info",
             width=25,
-            command=lambda: self.add_log("Botão VideoForge clicado")
+            command=lambda: self.abrir_modal_videoforge()
         )
         self.videoforge_button.pack(pady=(5, 10))
 
@@ -109,6 +109,17 @@ class GeradorDeVideosApp:
         self.log_text.insert(tk.END, f"{message}\n")
         self.log_text.see(tk.END)
 
+    def abrir_modal_videoforge(self):
+        from app_videoforge.abrir_modal_videoforge import abrir_modal_videoforge
+        from app_videoforge.controller import iniciar_fluxo_videoforge
+        from app_videoforge import controller
+        controller.set_logger(self.add_log)
+
+
+        abrir_modal_videoforge(
+            self.root,
+            callback_executar_controller=iniciar_fluxo_videoforge
+        )
 
 if __name__ == "__main__":
     root = tb.Window(themename="darkly")
