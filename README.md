@@ -1,4 +1,3 @@
-````markdown
 # Gerador de Conteúdo Automatizado
 
 Aqui você vai encontrar *todas* as minhas ferramentas de geração automática de conteúdo. Conforme surgem novas maluquices, adiciono os tutoriais aqui.
