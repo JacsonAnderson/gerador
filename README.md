@@ -1,103 +1,105 @@
-# Gerador de Conteúdo Automatizado
+# 🧠 Gerador de Conteúdo Automatizado
 
-Aqui você vai encontrar *todas* as minhas ferramentas de geração automática de conteúdo. Conforme surgem novas maluquices, adiciono os tutoriais aqui.
+Aqui você vai encontrar **todas** as minhas ferramentas para gerar conteúdo automaticamente. Conforme as ideias (ou surtos) forem surgindo, adiciono tudo aqui — com tutorial e um pouco de sarcasmo.
 
 > ⚡ **Importante:**  
-> A geração de roteiros ainda está em **BETA** — melhorias e ajustes pipocando toda hora.
+> A função de **geração de roteiros** ainda está em **BETA**. Melhorias estão sendo feitas na marra.
 
 > ⚠️ **Atenção:**  
-> Este projeto foi testado com **Python 3.11.9**.  
-> Pra evitar dor de cabeça, use a mesma versão.
+> Projeto testado com **Python 3.11.9**.  
+> Use essa versão se não quiser sofrer com bugs randômicos.
 
 ---
 
-## 🚀 Instalação e configuração
+## 🚀 Instalação
 
-1. **Clone o repositório**  
-   ```bash
-   git clone https://github.com/JacsonAnderson/gerador.git
-````
+1. **Clone o repositório**
 
-2. **Entre na pasta**
+```bash
+git clone https://github.com/JacsonAnderson/gerador.git
+```
 
-   ```bash
-   cd gerador
-   ```
+2. **Acesse a pasta**
 
-3. **Crie um virtualenv**
+```bash
+cd gerador
+```
 
-   ```bash
-   python -m venv .venv
-   ```
+3. **Crie um ambiente virtual**
 
-   > No Windows:
-   >
-   > ```bash
-   > .venv\Scripts\activate
-   > ```
+```bash
+python -m venv .venv
+```
+
+> No Windows:
+>
+> ```bash
+> .venv\Scripts\activate
+> ```
 
 4. **Instale as dependências**
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+pip install -r requirements.txt
+```
 
-5. **Configure sua chave OpenAI**
+5. **Configure o ambiente**
 
-   * Renomeie `.env.example` para `.env`
-   * Preencha:
+Renomeie o `.env.example` para `.env` e insira sua chave da OpenAI:
 
-     ```
-     OPENAI_API_KEY=sua_chave_aqui
-     ```
+```
+OPENAI_API_KEY=sua_chave_aqui
+```
 
-6. **Rode o app**
+6. **Execute o app**
 
-   ```bash
-   python app.py
-   ```
+```bash
+python app.py
+```
 
-   (por enquanto)
-
----
-
-## 🎯 Observações
-
-* Modelos GPT foram escolhidos a dedo pelo melhor custo-benefício sem fritar sua fatura.
-* **Não** fique trocando o modelo no código sem entender a bagunça toda.
-* Quase tudo aqui é pipoca: melhorias contínuas, funções novas e… bug fixes (muitos).
+(Sim, ainda é manual… mas funciona.)
 
 ---
 
 ## 📋 Status do Projeto
 
-* ✅ Interface simples e dinâmica (vou dar aquele tapa depois).
-* ✅ Banco de dados SQLite + criação automática de pastas.
-* 🔄 Roteiro no `videoforge`: gera tópicos, resumos e introduções, mas ainda tá meio **experimental**.
-* 🚧 Geração de conteúdo fluido e conectado entre tópicos (**em testes**).
-* 🚀 Novas funcionalidades pipocando toda hora.
+- ✅ Interface simples e funcional (com potencial pra ficar bonita).
+- ✅ Banco de dados em SQLite, pastas geradas automaticamente.
+- 🔄 Geração de roteiro com tópicos, resumos e introdução (funciona, mas exige ajustes).
+- 🚧 Geração de conteúdo conectado entre tópicos está **em testes**.
+- 🚀 Novas ideias e melhorias surgindo no caos (como sempre).
+
+---
+
+## 🎯 Observações
+
+- Os modelos GPT foram escolhidos pelo melhor custo-benefício (sim, eu pesquisei).
+- **Não troque** o modelo à toa. Você pode quebrar tudo e me culpar depois.
+- Se algo não funcionar... provavelmente é culpa do universo. Ou do Python. Ou sua.
 
 ---
 
 ## 📬 Contato
 
-Dúvidas, sugestões ou só pra brincar: abra uma **Issue** ou me ache no GitHub!
+Quer sugerir algo, reclamar ou apenas dizer “oi”?  
+Abra uma **Issue** ou me ache no [GitHub](https://github.com/JacsonAnderson).
 
-> **Feito com café, códigos e healthy sarcasm por [Jacson Anderson](https://github.com/JacsonAnderson)** 🚀✨
+> Feito com cafeína, teimosia e algumas lágrimas por [Jacson Anderson](https://github.com/JacsonAnderson) 🚀
 
 ---
 
-## 📬 Histórico de Mudanças & Diário da Depressão (meme ou verdade? você decide) kk 👌😎
+## 🗓️ Histórico de Mudanças & Diário da Depressão (meme ou verdade?)
 
-**19/06/2025**
-– Voltei ao projeto após 1 mês largado — quase joguei tudo no lixo, mas aquela vergonha me segurou.
-– A YouTube Transcript API tava me zuando com erros sem sentido. Criei um `db_manager.py` pra dar um tapa na lógica, mas prometo fusionar tudo num `app.py` decente… um dia.
+### 🧩 19/06/2025
 
-**21/06/2025**
-– Manhã inteira caçando transcrição automática, tentando não surtar.
-– Solução feliz: `yt_dlp` baixa o `.vtt`, `webvtt` limpa o texto.
-– **O bug da vez**: meu nome de arquivo era o meu `video_id` interno, mas eu procurava pelo **YouTube ID**. Glob nunca achava, e eu rodava tudo em vão. Corrigi pra usar sempre o **YouTube ID** no nome do `.vtt` — agora baixa UMA legenda, limpa e cospe no `transcript_original.json`.
+- Voltei pro projeto depois de um mês parado. Estava pronto pra deletar tudo, mas a culpa venceu.
+- A YouTube Transcript API decidiu me trolar com erros obscuros.
+- Criei um `db_manager.py` pra consertar uma lógica zoada. Um dia eu junto tudo no `app.py`… talvez.
 
+### 📉 21/06/2025
 
-```
-```
+- Passei a manhã inteira lutando com as transcrições automáticas.
+- A solução: usar `yt_dlp` pra baixar `.vtt` e `webvtt` pra limpar tudo.
+- **Bug nojento**: eu nomeava os arquivos com o `video_id` interno, mas buscava usando o **YouTube ID**. O `glob` não achava nada. Corrigido. Agora baixa UMA legenda e salva tudo direitinho em `transcript_original.json`.
+
+E seguimos... entre bugs e cafés.
