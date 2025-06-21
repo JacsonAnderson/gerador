@@ -76,19 +76,19 @@ def baixar_legenda_yt(url, prioridade_idiomas=None, pasta_destino="."):
         'quiet': True,
     }
 
-    log_callback(f" ✅ Baixando legendas de: {url}")
+    log_callback(f"  ✅ Baixando legendas de: {url}")
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
             info = ydl.extract_info(url, download=True)
             yt_id = info['id']
-            log_callback(f" ✅ YouTube ID detectado: {yt_id}")
+            log_callback(f"  ✅ YouTube ID detectado: {yt_id}")
         except Exception as e:
-            log_callback(f" ⚠️ Erro no extract_info: {e}")
+            log_callback(f"  ⚠️ Erro no extract_info: {e}")
             return None, None
 
     # coleta todos os VTTs
     vtt_files = list(Path(pasta_destino).glob(f"{yt_id}.*.vtt"))
-    log_callback(f" ✅ VTTs baixados: {[f.name for f in vtt_files]}")
+    log_callback(f"  ✅ VTTs baixados: {[f.name for f in vtt_files]}")
 
     # escolhe por prioridade
     escolhida = None
@@ -106,10 +106,10 @@ def baixar_legenda_yt(url, prioridade_idiomas=None, pasta_destino="."):
     if not escolhida and vtt_files:
         escolhida = vtt_files[0]
         idioma = escolhida.stem.split('.')[-1]
-        log_callback(f" ⚠️ Sem prioridade, usando: {escolhida.name}")
+        log_callback(f"  ⚠️ Sem prioridade, usando: {escolhida.name}")
 
     if not escolhida:
-        log_callback(" ⚠️ Nenhum VTT encontrado.")
+        log_callback("  ⚠️ Nenhum VTT encontrado.")
         return None, None
 
     # extrai o texto
@@ -129,7 +129,7 @@ def baixar_legenda_yt(url, prioridade_idiomas=None, pasta_destino="."):
         legendas.append(texto)
 
     transcricao = " ".join(legendas).strip()
-    log_callback(f" ✅ Texto extraído: {len(transcricao)} chars")
+    log_callback(f"  ✅ Texto extraído: {len(transcricao)} chars")
 
     # limpa todos os .vtt
     for f in vtt_files:
@@ -156,17 +156,17 @@ def gerar_resumo(canal: str, video_id: str) -> bool:
     meta_path  = cp / "metadados.json"
 
     if not transcript.exists():
-        log_callback(f" ⚠️ Transcrição não encontrada em {transcript}")
+        log_callback(f"  ⚠️ Transcrição não encontrada em {transcript}")
         return False
     if not meta_path.exists():
-        log_callback(f" ⚠️ metadados.json não encontrado em {meta_path}")
+        log_callback(f"  ⚠️ metadados.json não encontrado em {meta_path}")
         return False
 
     # carrega transcrição limpa
     dados_trans = json.loads(transcript.read_text(encoding="utf-8"))
     txt = dados_trans.get("transcricao_limpa") if isinstance(dados_trans, dict) else ""
     if not txt or not txt.strip():
-        log_callback(" ⚠️ Transcrição vazia.")
+        log_callback("  ⚠️ Transcrição vazia.")
         return False
 
     prompt = (
@@ -201,11 +201,11 @@ def gerar_resumo(canal: str, video_id: str) -> bool:
             encoding="utf-8"
         )
 
-        log_callback(f" ✅ Resumo salvo em {meta_path}")
+        log_callback(f"  ✅ Resumo salvo em {meta_path}")
         return True
 
     except Exception as e:
-        log_callback(f" ⚠️ Erro ao gerar resumo: {e}")
+        log_callback(f"  ⚠️ Erro ao gerar resumo: {e}")
         return False
 
 
@@ -220,17 +220,17 @@ def gerar_topicos(canal: str, video_id: str) -> bool:
     # 1) já gerado?
     meta = json.loads(metadados_path.read_text(encoding="utf-8"))
     if meta.get("topicos"):
-        log_callback(" ✅ Tópicos já existem em metadados.json. Pulando.")
+        log_callback("  ✅ Tópicos já existem em metadados.json. Pulando.")
         return True
 
     # 2) transcript ok?
     if not transcript_p.exists():
-        log_callback(" ⚠️ Transcrição não encontrada. Não foi possível gerar tópicos.")
+        log_callback("  ⚠️ Transcrição não encontrada. Não foi possível gerar tópicos.")
         return False
     dados = json.loads(transcript_p.read_text(encoding="utf-8"))
     txt   = dados.get("transcricao_limpa", "") if isinstance(dados, dict) else ""
     if not txt.strip():
-        log_callback(" ⚠️ Transcrição vazia. Não foi possível gerar tópicos.")
+        log_callback("  ⚠️ Transcrição vazia. Não foi possível gerar tópicos.")
         return False
 
     # 3) carrega prompt_topicos (DB ou prompts.json)
@@ -242,7 +242,7 @@ def gerar_topicos(canal: str, video_id: str) -> bool:
             j = json.loads(prompts_file.read_text(encoding="utf-8"))
             prompt_top = j.get("prompt_topicos", "").strip()
     if not prompt_top:
-        log_callback(" ⚠️ prompt_topicos não definido. Não foi possível gerar tópicos.")
+        log_callback("  ⚠️ prompt_topicos não definido. Não foi possível gerar tópicos.")
         return False
 
     # 4) monta prompt final
@@ -290,7 +290,7 @@ RESUMO: "Descrição clara e detalhada do que esse tópico aborda."
     pad   = r'[Tt][oó]pico\s*(\d+):\s*"([^"]+)"\s*RESUMO:\s*"([^"]+)"'
     found = re.findall(pad, out, re.IGNORECASE)
     if not found:
-        log_callback(" ⚠️ Nenhum tópico detectado pela regex.")
+        log_callback("  ⚠️ Nenhum tópico detectado pela regex.")
         return False
 
     lista = [
@@ -320,7 +320,7 @@ def gerar_introducao(canal: str, video_id: str) -> bool:
 
     # 1) pré-requisitos
     if not meta_path.exists():
-        log_callback(f" ⚠️ metadados.json não encontrado em {meta_path}")
+        log_callback(f"  ⚠️ metadados.json não encontrado em {meta_path}")
         return False
 
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
@@ -330,7 +330,7 @@ def gerar_introducao(canal: str, video_id: str) -> bool:
 
     topicos = meta.get("topicos")
     if not topicos or not isinstance(topicos, list):
-        log_callback(" ⚠️ Tópicos não encontrados em metadados.json. Não foi possível gerar introdução.")
+        log_callback("  ⚠️ Tópicos não encontrados em metadados.json. Não foi possível gerar introdução.")
         return False
 
     # 2) monta a lista de tópicos para o prompt
@@ -377,7 +377,7 @@ Use os tópicos abaixo como referência **sem copiá-los literalmente**, para co
     # 5) chama a API
     try:
         resp = _client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.8,
         )
@@ -390,13 +390,120 @@ Use os tópicos abaixo como referência **sem copiá-los literalmente**, para co
             encoding="utf-8"
         )
 
-        log_callback(f" ✅ Introdução salva em {meta_path}")
+        log_callback(f"  ✅ Introdução salva em {meta_path}")
         return True
 
     except Exception as e:
-        log_callback(f" ⚠️ Erro ao gerar introdução: {e}")
+        log_callback(f"  ⚠️ Erro ao gerar introdução: {e}")
         return False
 
+
+# ------------------------------------------------------------------
+# 6) Gerar conteúdos dos tópicos e injetar em metadados.json
+# ------------------------------------------------------------------
+def gerar_conteudos_topicos(canal: str, video_id: str) -> bool:
+    """
+    Para cada tópico em metadados.json gera o bloco narrativo correspondente
+    e injeta tudo na chave "conteudos" dentro de data/{canal}/{video_id}/control/metadados.json.
+    """
+    control_dir = Path("data") / canal / video_id / "control"
+    meta_path   = control_dir / "metadados.json"
+
+    # 1) pré-requisitos
+    if not meta_path.exists():
+        log_callback(f"  ⚠️ metadados.json não encontrado em {meta_path}")
+        return False
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+
+    # 2) pula se já gerado
+    if meta.get("conteudos"):
+        log_callback("  ✅ Conteúdos já existem em metadados.json. Pulando.")
+        return True
+
+    # 3) checa os dados básicos
+    topicos    = meta.get("topicos")
+    resumo     = meta.get("resumo", "")
+    introducao = meta.get("introducao", "")
+    if not topicos or not isinstance(topicos, list):
+        log_callback("  ⚠️ Tópicos ausentes em metadados.json. Não foi possível gerar conteúdos.")
+        return False
+    if not resumo:
+        log_callback("  ⚠️ Resumo ausente em metadados.json. Não foi possível gerar conteúdos.")
+        return False
+    if not introducao:
+        log_callback("  ⚠️ Introdução ausente em metadados.json. Não foi possível gerar conteúdos.")
+        return False
+
+    # 4) carrega prompt_roteiro de data/{canal}/prompts.json
+    prompts_file = Path("data") / canal / "prompts.json"
+    if not prompts_file.exists():
+        log_callback("  ⚠️ prompts.json não encontrado no canal. Não foi possível gerar conteúdos.")
+        return False
+
+    j = json.loads(prompts_file.read_text(encoding="utf-8"))
+    prompt_base = j.get("prompt_roteiro", "").strip()
+    if not prompt_base:
+        log_callback("  ⚠️ prompt_roteiro não definido em prompts.json. Não foi possível gerar conteúdos.")
+        return False
+
+    # 5) instrução de idioma
+    cfg          = _carregar_configs(canal, video_id)       
+    idioma       = (cfg.get("idioma") or "").lower()
+    inst_idioma  = obter_instrucao_idioma(idioma)
+
+    # 6) monta o prompt completo
+    prompt = (
+        f"{inst_idioma}\n\n"
+        f"{prompt_base}\n\n"
+        f"Contexto geral do vídeo:\n\"{resumo}\"\n\n"
+        f"Introdução:\n\"{introducao}\"\n\n"
+        "Agora, para cada um dos tópicos abaixo, gere o conteúdo narrativo específico, "
+        "sem encerrar o raciocínio e mantendo a fluidez emocional:\n\n"
+    )
+    for t in topicos:
+        prompt += (
+            f"---\n"
+            f"Tópico {t['numero']}: {t['titulo']}\n"
+            f"Contexto do tópico: {t['resumo']}\n\n"
+        )
+    prompt += "📝 Gere agora o roteiro completo, parte a parte:\n"
+
+    # 7) chama a API
+    try:
+        resp = _client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.6,
+        )
+        out = resp.choices[0].message.content.strip()
+    except Exception as e:
+        log_callback(f"  ⚠️ Erro ao chamar OpenAI para conteúdos: {e}")
+        return False
+
+    # 8) extrai blocos via regex (Tópico N: Título → conteúdo até próximo tópico)
+    pattern = r'(?:[Tt][óo]pico)\s*(\d+):\s*(.+?)\n(.*?)(?=(?:\n(?:[Tt][óo]pico)\s*\d+:)|\Z)'
+    matches = re.findall(pattern, out, flags=re.IGNORECASE|re.DOTALL)
+    if not matches:
+        log_callback("  ⚠️ Nenhum bloco de conteúdo detectado pela regex.")
+        return False
+
+    conteudos = []
+    for num, titulo, texto in matches:
+        conteudos.append({
+            "numero": int(num),
+            "titulo": titulo.strip(),
+            "conteudo": texto.strip()
+        })
+
+    # 9) injeta e salva em metadados.json
+    meta["conteudos"] = conteudos
+    meta_path.write_text(
+        json.dumps(meta, ensure_ascii=False, indent=4),
+        encoding="utf-8"
+    )
+
+    log_callback("  ✅ Conteúdos salvos em metadados.json.")
+    return True
 
 
 # ------------------------------------------------------------

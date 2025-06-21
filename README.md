@@ -109,3 +109,6 @@ Abra uma **Issue** ou me ache no [GitHub](https://github.com/JacsonAnderson).
 - **Modularização**: criei o `vf_roteiro.py` pra concentrar TODAS as funções de geração de roteiro e usar direto no `controller.py`. Workflow:
   - Primeiro botei a geração de resumo… em menos de uma hora já estava rodando (pelo menos eu acho, kk).
   - Depois fui pra geração de tópicos e levei um bug bobo: eu só buscava o `prompt_topicos` nas configs do banco, mas na real o prompt estava no `data/{canal}/prompts.json`. Resultado: `prompt_topicos` vazio e nenhum tópico gerado. Agora ele carrega dos dois lugares certinho e não faltam tópicos.
+  - Adicionar o gerador de introdução foi bem facil depois de ter percebido os erros que eu cometi antes, estamos progredindo muito rapido. Eu espero conseguir terminar tudo hoje
+  - Foi o mesmo com o gerador de conteudo, deveras rapido até de mais... Suspeito que tem algo errado.
+

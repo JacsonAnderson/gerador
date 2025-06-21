@@ -3,7 +3,7 @@ import sqlite3
 import json
 from pathlib import Path
 
-from app_videoforge.vf_roteiro import gerar_resumo, gerar_topicos, gerar_introducao, baixar_legenda_yt, set_logger as set_roteiro_logger
+from app_videoforge.vf_roteiro import gerar_resumo, gerar_topicos, gerar_introducao, gerar_conteudos_topicos, baixar_legenda_yt, set_logger as set_roteiro_logger
 
 
 VIDEOS_DB_PATH = Path("data/videos.db")
@@ -184,6 +184,11 @@ def processar_video(canal, video_id):
     # ─── Etapa 4: Introdução ────────────────────────────────────────────
     if not gerar_introducao(canal, video_id):
         log_callback("  ⚠️ Falha ao gerar introdução.")
+        return
+
+    # ─── Etapa 5: Conteúdos ────────────────────────────────────────────
+    if not gerar_conteudos_topicos(canal, video_id):
+        log_callback("  ⚠️ Falha ao gerar conteúdos dos tópicos.")
         return
 
 
