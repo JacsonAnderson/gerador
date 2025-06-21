@@ -76,19 +76,19 @@ def baixar_legenda_yt(url, prioridade_idiomas=None, pasta_destino="."):
         'quiet': True,
     }
 
-    log_callback(f"[vf_roteiro] Baixando legendas de: {url}")
+    log_callback(f" ✅ Baixando legendas de: {url}")
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
             info = ydl.extract_info(url, download=True)
             yt_id = info['id']
-            log_callback(f"[vf_roteiro] YouTube ID detectado: {yt_id}")
+            log_callback(f" ✅ YouTube ID detectado: {yt_id}")
         except Exception as e:
-            log_callback(f"[vf_roteiro] Erro no extract_info: {e}")
+            log_callback(f" ⚠️ Erro no extract_info: {e}")
             return None, None
 
     # coleta todos os VTTs
     vtt_files = list(Path(pasta_destino).glob(f"{yt_id}.*.vtt"))
-    log_callback(f"[vf_roteiro] VTTs baixados: {[f.name for f in vtt_files]}")
+    log_callback(f" ✅ VTTs baixados: {[f.name for f in vtt_files]}")
 
     # escolhe por prioridade
     escolhida = None
@@ -106,10 +106,10 @@ def baixar_legenda_yt(url, prioridade_idiomas=None, pasta_destino="."):
     if not escolhida and vtt_files:
         escolhida = vtt_files[0]
         idioma = escolhida.stem.split('.')[-1]
-        log_callback(f"[vf_roteiro] Sem prioridade, usando: {escolhida.name}")
+        log_callback(f" ⚠️ Sem prioridade, usando: {escolhida.name}")
 
     if not escolhida:
-        log_callback("[vf_roteiro] Nenhum VTT encontrado.")
+        log_callback(" ⚠️ Nenhum VTT encontrado.")
         return None, None
 
     # extrai o texto
@@ -129,7 +129,7 @@ def baixar_legenda_yt(url, prioridade_idiomas=None, pasta_destino="."):
         legendas.append(texto)
 
     transcricao = " ".join(legendas).strip()
-    log_callback(f"[vf_roteiro] Texto extraído: {len(transcricao)} chars")
+    log_callback(f" ✅ Texto extraído: {len(transcricao)} chars")
 
     # limpa todos os .vtt
     for f in vtt_files:
@@ -156,17 +156,17 @@ def gerar_resumo(canal: str, video_id: str) -> bool:
     meta_path  = cp / "metadados.json"
 
     if not transcript.exists():
-        log_callback(f"[vf_roteiro] Transcrição não encontrada em {transcript}")
+        log_callback(f" ⚠️ Transcrição não encontrada em {transcript}")
         return False
     if not meta_path.exists():
-        log_callback(f"[vf_roteiro] metadados.json não encontrado em {meta_path}")
+        log_callback(f" ⚠️ metadados.json não encontrado em {meta_path}")
         return False
 
     # carrega transcrição limpa
     dados_trans = json.loads(transcript.read_text(encoding="utf-8"))
     txt = dados_trans.get("transcricao_limpa") if isinstance(dados_trans, dict) else ""
     if not txt or not txt.strip():
-        log_callback("[vf_roteiro] Transcrição vazia.")
+        log_callback(" ⚠️ Transcrição vazia.")
         return False
 
     prompt = (
@@ -201,11 +201,11 @@ def gerar_resumo(canal: str, video_id: str) -> bool:
             encoding="utf-8"
         )
 
-        log_callback(f"✅ Resumo salvo em {meta_path}")
+        log_callback(f" ✅ Resumo salvo em {meta_path}")
         return True
 
     except Exception as e:
-        log_callback(f"⚠️ Erro ao gerar resumo: {e}")
+        log_callback(f" ⚠️ Erro ao gerar resumo: {e}")
         return False
 
 
@@ -220,17 +220,17 @@ def gerar_topicos(canal: str, video_id: str) -> bool:
     # 1) já gerado?
     meta = json.loads(metadados_path.read_text(encoding="utf-8"))
     if meta.get("topicos"):
-        log_callback("✅ Tópicos já existem em metadados.json. Pulando.")
+        log_callback(" ✅ Tópicos já existem em metadados.json. Pulando.")
         return True
 
     # 2) transcript ok?
     if not transcript_p.exists():
-        log_callback("⚠️ Transcrição não encontrada. Não foi possível gerar tópicos.")
+        log_callback(" ⚠️ Transcrição não encontrada. Não foi possível gerar tópicos.")
         return False
     dados = json.loads(transcript_p.read_text(encoding="utf-8"))
     txt   = dados.get("transcricao_limpa", "") if isinstance(dados, dict) else ""
     if not txt.strip():
-        log_callback("⚠️ Transcrição vazia. Não foi possível gerar tópicos.")
+        log_callback(" ⚠️ Transcrição vazia. Não foi possível gerar tópicos.")
         return False
 
     # 3) carrega prompt_topicos (DB ou prompts.json)
@@ -242,7 +242,7 @@ def gerar_topicos(canal: str, video_id: str) -> bool:
             j = json.loads(prompts_file.read_text(encoding="utf-8"))
             prompt_top = j.get("prompt_topicos", "").strip()
     if not prompt_top:
-        log_callback("⚠️ prompt_topicos não definido. Não foi possível gerar tópicos.")
+        log_callback(" ⚠️ prompt_topicos não definido. Não foi possível gerar tópicos.")
         return False
 
     # 4) monta prompt final
@@ -281,7 +281,7 @@ RESUMO: "Descrição clara e detalhada do que esse tópico aborda."
 
     # 5) chama OpenAI e extrai via regex
     resp = _client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="gpt-4o",
         messages=[{"role":"user","content":prompt_final}],
         temperature=0.4
     )
@@ -290,7 +290,7 @@ RESUMO: "Descrição clara e detalhada do que esse tópico aborda."
     pad   = r'[Tt][oó]pico\s*(\d+):\s*"([^"]+)"\s*RESUMO:\s*"([^"]+)"'
     found = re.findall(pad, out, re.IGNORECASE)
     if not found:
-        log_callback("⚠️ Nenhum tópico detectado pela regex.")
+        log_callback(" ⚠️ Nenhum tópico detectado pela regex.")
         return False
 
     lista = [
@@ -305,6 +305,98 @@ RESUMO: "Descrição clara e detalhada do que esse tópico aborda."
         encoding="utf-8"
     )
     return True
+
+
+# ------------------------------------------------------------------
+# 6) Gerar introdução e injetar em metadados.json
+# ------------------------------------------------------------------
+def gerar_introducao(canal: str, video_id: str) -> bool:
+    """
+    Gera uma introdução curta e impactante a partir dos tópicos em metadados.json
+    e injeta esse texto na chave "introducao" dentro de data/{canal}/{video_id}/control/metadados.json.
+    """
+    control_dir = Path("data") / canal / video_id / "control"
+    meta_path   = control_dir / "metadados.json"
+
+    # 1) pré-requisitos
+    if not meta_path.exists():
+        log_callback(f" ⚠️ metadados.json não encontrado em {meta_path}")
+        return False
+
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    if meta.get("introducao"):
+        log_callback("  ✅ Introdução já existe em metadados.json. Pulando.")
+        return True
+
+    topicos = meta.get("topicos")
+    if not topicos or not isinstance(topicos, list):
+        log_callback(" ⚠️ Tópicos não encontrados em metadados.json. Não foi possível gerar introdução.")
+        return False
+
+    # 2) monta a lista de tópicos para o prompt
+    lista_markdown = "".join(f"- {t['titulo']}: {t['resumo']}\n" for t in topicos)
+
+    # 3) carrega configs para instruções de idioma
+    cfg     = _carregar_configs(canal, video_id)
+    idioma  = (cfg.get("idioma") or "").lower()
+    inst_id = obter_instrucao_idioma(idioma)
+
+    # 4) monta o prompt
+    prompt = f"""
+Você é um especialista em criação de introduções altamente persuasivas e emocionalmente impactantes para vídeos de YouTube. Seu trabalho é capturar imediatamente a atenção do público e gerar um forte desejo de continuar assistindo, usando frases que toquem nas dores reais, nos desejos ocultos e nas promessas transformadoras que o vídeo pode entregar.
+
+Sua missão é criar uma introdução curta (máximo 150 palavras) para o canal "{canal}", baseada nos tópicos abaixo, respeitando as diretrizes obrigatórias:
+
+⚡ Diretrizes obrigatórias:
+- A primeira frase deve **impactar diretamente o emocional ou o racional do espectador em menos de 5 segundos**, com uma dor, desejo ou pergunta instigante.
+- A introdução deve criar uma **conexão real com o público**, fazendo com que ele se sinta compreendido em sua dor, ansiedade, dúvida ou busca pessoal.
+- Em seguida, apresente **uma promessa concreta**, uma transformação que será abordada no vídeo — **sem soar como técnica de marketing**, mas com **autoridade natural** e tom de revelação importante.
+- Finalize com uma **frase fluida e emocional**, sem dar fechamento ou comandos explícitos — apenas mantendo a tensão emocional viva, como um gancho natural que conduz ao próximo conteúdo.
+
+📌 Linguagem:
+- Escreva com frases fortes, curtas, emocionalmente vívidas e específicas.
+- Fale com **clareza**, **urgência emocional**, **sem abstrações**, **sem metáforas místicas** e **sem floreios poéticos genéricos**.
+- Parece uma conversa sincera com alguém que realmente precisa ouvir isso — e **não** uma abertura formal de vídeo.
+
+🚫 Proibições obrigatórias:
+- **NÃO** use frases como: “Neste vídeo você verá…”, “Hoje falaremos sobre…”, “Em um rincón do universo…”, “Prepare-se para…”, “Acompanhe até o final…”.
+- **NÃO** mencione técnicas, métodos, sistemas, estratégias, marketing, nem qualquer termo metalinguístico.
+- **NÃO** escreva de forma genérica, mística, vaga, motivacional de autoajuda ou fantasiosa.
+- **NÃO** finalize o texto com frases de encerramento. A introdução deve ser como um “gancho emocional” que leva direto para o primeiro tópico do vídeo.
+
+Use os tópicos abaixo como referência **sem copiá-los literalmente**, para construir uma introdução intensa e altamente persuasiva:
+
+📋 **Tópicos do Vídeo (não copie literalmente, use como base):**
+{lista_markdown}
+
+{inst_id}
+
+📝 Crie agora a introdução: curta, impactante, emocionalmente envolvente, com promessa clara, sem encerramento explícito e com um gancho natural que leve ao primeiro conteúdo.
+"""
+
+    # 5) chama a API
+    try:
+        resp = _client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.8,
+        )
+        introducao = resp.choices[0].message.content.strip()
+
+        # 6) injeta e salva
+        meta["introducao"] = introducao
+        meta_path.write_text(
+            json.dumps(meta, ensure_ascii=False, indent=4),
+            encoding="utf-8"
+        )
+
+        log_callback(f" ✅ Introdução salva em {meta_path}")
+        return True
+
+    except Exception as e:
+        log_callback(f" ⚠️ Erro ao gerar introdução: {e}")
+        return False
+
 
 
 # ------------------------------------------------------------
