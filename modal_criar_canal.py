@@ -7,7 +7,7 @@ from tkinter import ttk, messagebox
 import ttkbootstrap as tb
 from datetime import datetime
 from pathlib import Path
-from app_roteiro.modulo_idioma import IDIOMAS_SUPORTADOS
+from app_videoforge.vf_roteiro import IDIOMAS_SUPORTADOS
 
 DB_PATH = Path("data/channels.db")
 

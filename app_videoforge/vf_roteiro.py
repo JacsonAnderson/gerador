@@ -8,18 +8,17 @@ from pathlib import Path
 # Importante para o baixar_legenda_yt
 import yt_dlp
 
-
 # Importante para usar o chat gpt
 from dotenv import load_dotenv
 from openai import OpenAI
 
 
-
-
 # ------------------------------------------------------------------
-# 1) Carregamento de configs direto do SQLite
+# 1) Carregamento de configs direto do SQLite e Carrega idioma do canal direto do SQLite (channels.db)
 # ------------------------------------------------------------------
 VIDEOS_DB_PATH = Path("data/videos.db")
+CHANNELS_DB_PATH = Path("data/channels.db")
+
 
 def _carregar_configs(canal: str, video_id: str) -> dict:
     """Busca configs JSON diretamente na tabela videos."""
@@ -37,6 +36,23 @@ def _carregar_configs(canal: str, video_id: str) -> dict:
     except:
         return {}
 
+def _carregar_idioma_canal(canal: str) -> str:
+    """
+    Busca a coluna 'idioma' na tabela 'canais' para o nome do canal fornecido.
+    Retorna o código do idioma (ex: 'pt', 'es', 'en', ...), ou '' se não encontrar.
+    """
+    try:
+        with sqlite3.connect(CHANNELS_DB_PATH) as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT idioma FROM canais WHERE nome = ?", (canal,))
+            row = cur.fetchone()
+        return row[0] if row and row[0] else ""
+    except Exception:
+        return ""
+
+def obter_instrucao_idioma(codigo_idioma):
+    """Retorna a instrução correta para o idioma especificado."""
+    return IDIOMAS_SUPORTADOS.get(codigo_idioma.lower(), {}).get("instrucao", "")
 
 # ------------------------------------------------------------------
 # 2) Inicialização do cliente OpenAI
@@ -336,10 +352,12 @@ def gerar_introducao(canal: str, video_id: str) -> bool:
     # 2) monta a lista de tópicos para o prompt
     lista_markdown = "".join(f"- {t['titulo']}: {t['resumo']}\n" for t in topicos)
 
-    # 3) carrega configs para instruções de idioma
-    cfg     = _carregar_configs(canal, video_id)
-    idioma  = (cfg.get("idioma") or "").lower()
-    inst_id = obter_instrucao_idioma(idioma)
+    # 3) resolve idioma: primeiro do vídeo, senão do canal
+    cfg           = _carregar_configs(canal, video_id)
+    idioma_video  = (cfg.get("idioma") or "").lower()
+    idioma_canal  = _carregar_idioma_canal(canal).lower()
+    idioma        = idioma_video or idioma_canal or "pt"
+    inst_id       = obter_instrucao_idioma(idioma)
 
     # 4) monta o prompt
     prompt = f"""
@@ -390,12 +408,13 @@ Use os tópicos abaixo como referência **sem copiá-los literalmente**, para co
             encoding="utf-8"
         )
 
-        log_callback(f"  ✅ Introdução salva em {meta_path}")
+        log_callback("  ✅ Introdução salva em metadados.json. Pulando.")
         return True
 
     except Exception as e:
         log_callback(f"  ⚠️ Erro ao gerar introdução: {e}")
         return False
+
 
 
 # ------------------------------------------------------------------
@@ -434,25 +453,28 @@ def gerar_conteudos_topicos(canal: str, video_id: str) -> bool:
         log_callback("  ⚠️ Introdução ausente em metadados.json. Não foi possível gerar conteúdos.")
         return False
 
-    # 4) carrega prompt_roteiro de data/{canal}/prompts.json
+    # 4) carrega prompt_base de data/{canal}/prompts.json
     prompts_file = Path("data") / canal / "prompts.json"
     if not prompts_file.exists():
         log_callback("  ⚠️ prompts.json não encontrado no canal. Não foi possível gerar conteúdos.")
         return False
-
     j = json.loads(prompts_file.read_text(encoding="utf-8"))
     prompt_base = j.get("prompt_roteiro", "").strip()
     if not prompt_base:
         log_callback("  ⚠️ prompt_roteiro não definido em prompts.json. Não foi possível gerar conteúdos.")
         return False
 
-    # 5) instrução de idioma
-    cfg          = _carregar_configs(canal, video_id)       
-    idioma       = (cfg.get("idioma") or "").lower()
+    # 5) instrução de idioma: primeiro do vídeo, senão do canal
+    cfg          = _carregar_configs(canal, video_id)
+    idioma_video = (cfg.get("idioma") or "").lower()
+    idioma_canal = _carregar_idioma_canal(canal).lower()
+    idioma       = idioma_video or idioma_canal or "pt"
     inst_idioma  = obter_instrucao_idioma(idioma)
+    nome_idioma  = IDIOMAS_SUPORTADOS.get(idioma, {}).get("nome", "Português Brasileiro")
 
-    # 6) monta o prompt completo
+    # 6) monta o prompt completo, reforçando uso do idioma do canal
     prompt = (
+        f"⚠️ **ATENÇÃO**: Todo o texto abaixo deve ser redigido **exclusivamente em {nome_idioma}**.\n\n"
         f"{inst_idioma}\n\n"
         f"{prompt_base}\n\n"
         f"Contexto geral do vídeo:\n\"{resumo}\"\n\n"
@@ -466,12 +488,16 @@ def gerar_conteudos_topicos(canal: str, video_id: str) -> bool:
             f"Tópico {t['numero']}: {t['titulo']}\n"
             f"Contexto do tópico: {t['resumo']}\n\n"
         )
-    prompt += "📝 Gere agora o roteiro completo, parte a parte:\n"
+    prompt += (
+        "📝 Gere agora o roteiro completo, parte a parte:\n"
+        "⚠️ IMPORTANTE: Cada bloco deve começar numa nova linha exatamente como “Tópico XX: Título do tópico” "
+        "e, no parágrafo seguinte, vir o conteúdo. Não use bullets, numeração alternativa nem variações de hífen."
+    )
 
     # 7) chama a API
     try:
         resp = _client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.6,
         )
@@ -480,13 +506,23 @@ def gerar_conteudos_topicos(canal: str, video_id: str) -> bool:
         log_callback(f"  ⚠️ Erro ao chamar OpenAI para conteúdos: {e}")
         return False
 
-    # 8) extrai blocos via regex (Tópico N: Título → conteúdo até próximo tópico)
-    pattern = r'(?:[Tt][óo]pico)\s*(\d+):\s*(.+?)\n(.*?)(?=(?:\n(?:[Tt][óo]pico)\s*\d+:)|\Z)'
-    matches = re.findall(pattern, out, flags=re.IGNORECASE|re.DOTALL)
+    # 8) extrai blocos via regex
+    pattern = re.compile(
+        r'''(?m)                       # modo multilinha
+        ^\s*                           # início da linha, espaços
+        (?:[Tt][óo]pico)\s*(\d+)[\s:\-–]+   # “Tópico N:” ou “Tópico N-”
+        (.+?)\r?\n                     # título até quebra de linha
+        ([\s\S]*?)(?=                  # bloco até
+            ^\s*(?:[Tt][óo]pico)\s*\d+ # próximo tópico
+            |\Z                        # ou fim do texto
+        )''', re.IGNORECASE|re.VERBOSE
+    )
+    matches = pattern.findall(out)
     if not matches:
         log_callback("  ⚠️ Nenhum bloco de conteúdo detectado pela regex.")
         return False
 
+    # 9) formata e salva
     conteudos = []
     for num, titulo, texto in matches:
         conteudos.append({
@@ -495,7 +531,6 @@ def gerar_conteudos_topicos(canal: str, video_id: str) -> bool:
             "conteudo": texto.strip()
         })
 
-    # 9) injeta e salva em metadados.json
     meta["conteudos"] = conteudos
     meta_path.write_text(
         json.dumps(meta, ensure_ascii=False, indent=4),
@@ -504,6 +539,7 @@ def gerar_conteudos_topicos(canal: str, video_id: str) -> bool:
 
     log_callback("  ✅ Conteúdos salvos em metadados.json.")
     return True
+
 
 
 # ------------------------------------------------------------
@@ -601,7 +637,4 @@ IDIOMAS_SUPORTADOS = {
     },
 }
 
-def obter_instrucao_idioma(codigo_idioma):
-    """Retorna a instrução correta para o idioma especificado."""
-    return IDIOMAS_SUPORTADOS.get(codigo_idioma.lower(), {}).get("instrucao", "")
 

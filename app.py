@@ -87,7 +87,7 @@ class GeradorDeVideosApp:
         for i, nome in enumerate(nomes_botoes):
             if nome == "Gerar Roteiro":
                 # Inicia a função gerar_roteiro em uma nova thread para não bloquear a UI
-                action = lambda: threading.Thread(target=self.gerar_roteiro, daemon=True).start()
+                action = lambda n=nome: self.add_log(f"Botão '{n}' clicado, porem ainda não funciona")
             else:
                 action = lambda n=nome: self.add_log(f"Botão '{n}' clicado") # Usa n=nome para capturar o valor correto
             ttk.Button(self.buttons_frame, text=nome, command=action, **self.botao_style).grid(row=0, column=i, padx=10)

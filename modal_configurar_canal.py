@@ -5,7 +5,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import ttkbootstrap as tb
 from pathlib import Path
-from app_roteiro.modulo_idioma import IDIOMAS_SUPORTADOS
+from app_videoforge.vf_roteiro import IDIOMAS_SUPORTADOS
 from modal_configuracoes_avancadas import abrir_modal_configuracoes_avancadas
 
 DB_PATH = Path("data/channels.db")
