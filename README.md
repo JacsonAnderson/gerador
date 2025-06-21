@@ -16,7 +16,7 @@ Aqui você vai encontrar *todas* as minhas ferramentas de geração automática 
 1. **Clone o repositório**  
    ```bash
    git clone https://github.com/JacsonAnderson/gerador.git
-````
+```
 
 2. **Entre na pasta**
 
