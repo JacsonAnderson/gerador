@@ -2,7 +2,9 @@ import re
 import sqlite3
 import json
 from pathlib import Path
-import yt_dlp
+
+from app_videoforge.vf_roteiro import gerar_resumo, gerar_topicos, baixar_legenda_yt, set_logger as set_roteiro_logger
+
 
 VIDEOS_DB_PATH = Path("data/videos.db")
 CHANNELS_DB_PATH = Path("data/channels.db")
@@ -24,6 +26,7 @@ log_callback = print
 def set_logger(callback):
     global log_callback
     log_callback = callback
+    set_roteiro_logger(log_callback)  
 
 def iniciar_fluxo_videoforge(modo, canal=None, video_id=None):
     if modo == "video":
@@ -91,96 +94,19 @@ def atualizar_estado_video(canal, video_id, estado_codigo):
                        (estado_codigo, canal, video_id))
         conn.commit()
 
-def baixar_legenda_yt(url, prioridade_idiomas=None, pasta_destino="."):
-    """
-    Baixa UMA legenda automática do YouTube na ordem en > es > pt > qualquer outro.
-    Retorna: (transcricao_texto, idioma_utilizado) ou (None, None).
-    Remove todos os .vtt depois de usar.
-    """
-    Path(pasta_destino).mkdir(parents=True, exist_ok=True)
-    if prioridade_idiomas is None:
-        prioridade_idiomas = ['en', 'es', 'pt']
-
-    ydl_opts = {
-        'writesubtitles': True,
-        'writeautomaticsub': True,
-        'skip_download': True,
-        'outtmpl': f"{pasta_destino}/%(id)s.%(ext)s",
-        'quiet': True,
-    }
-
-    log_callback(f"  [Transcritor] Baixando legendas: {url}")
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        try:
-            info = ydl.extract_info(url, download=True)
-            yt_id = info['id']
-            log_callback(f"  [Transcritor] YouTube ID: {yt_id}")
-        except Exception as e:
-            log_callback(f"  [Transcritor] Erro extract_info: {e}")
-            return None, None
-
-    vtt_files = list(Path(pasta_destino).glob(f"{yt_id}.*.vtt"))
-    log_callback(f"  [Transcritor] VTTs encontrados: {[f.name for f in vtt_files]}")
-
-    escolhida = None
-    idioma = None
-    # procura nos prioritários
-    for lang in prioridade_idiomas:
-        for f in vtt_files:
-            if f.stem.endswith(lang):
-                escolhida = f
-                idioma = lang
-                break
-        if escolhida:
-            break
-
-    # se não achou, pega o primeiro disponível
-    if not escolhida and vtt_files:
-        escolhida = vtt_files[0]
-        idioma = escolhida.stem.split('.')[-1]
-
-    if not escolhida:
-        log_callback("  [Transcritor] Nenhum VTT disponível.")
-        return None, None
-
-    # limpa e extrai texto
-    linhas = escolhida.read_text(encoding="utf-8").splitlines()
-    legendas = []
-    for l in linhas:
-        l = l.strip()
-        if (not l
-            or l.startswith("WEBVTT")
-            or l.startswith("Kind:")
-            or l.startswith("Language:")
-            or re.match(r"\d\d:\d\d:\d\d\.\d\d\d\s+-->", l)
-            or "align:" in l
-            or "position:" in l):
-            continue
-        texto = re.sub(r"<.*?>", "", l)
-        if re.search(r'\[(music|música|musique|musik|musica)\]', texto, re.IGNORECASE):
-            continue
-        legendas.append(texto)
-    transcricao = " ".join(legendas).strip()
-    log_callback(f"  [Transcritor] Transcrição: {len(transcricao)} caracteres")
-
-    # apaga todos os VTTs
-    for f in vtt_files:
-        try: f.unlink()
-        except: pass
-
-    return transcricao, idioma
 
 def processar_video(canal, video_id):
     log_callback(f"\n📌 Processando Vídeo {video_id} do Canal {canal}...")
     configs = carregar_configs_video(canal, video_id)
     if not configs.get("gerar_roteiro", False):
-        log_callback("  ⏭ Ignorado.")
+        log_callback("  ⏭ Ignorado (gerar_roteiro=False).")
         return
     if configs.get("roteiro_ok", 0) == 1:
-        log_callback("  ⏭ Já finalizado.")
+        log_callback("  ⏭ Já finalizado (roteiro_ok=1).")
         return
 
-    metadados_path = Path(f"data/{canal}/{video_id}/control/metadados.json")
+    control_dir = Path(f"data/{canal}/{video_id}/control")
+    metadados_path = control_dir / "metadados.json"
     if not metadados_path.exists():
         log_callback("  ❌ metadados.json não encontrado.")
         return
@@ -189,28 +115,75 @@ def processar_video(canal, video_id):
         log_callback("  ❌ Link ausente em metadados.json.")
         return
 
-    trans, idi = baixar_legenda_yt(
-        link,
-        prioridade_idiomas=['en', 'es', 'pt'],
-        pasta_destino=f"data/{canal}/{video_id}/control"
-    )
-
-    transcript_path = Path(f"data/{canal}/{video_id}/control/transcript_original.json")
-    if not trans or not trans.strip():
+    # ─── Etapa 1: Transcrição ─────────────────────────────────────────
+    transcript_path = control_dir / "transcript_original.json"
+    if transcript_path.exists():
+        try:
+            dados = json.loads(transcript_path.read_text(encoding="utf-8"))
+            if dados.get("transcricao_limpa", "").strip():
+                log_callback(f"  ✅ Transcrição já existente em {transcript_path}. Pulando etapa.")
+            else:
+                raise ValueError("transcricao_limpa vazia")
+        except Exception as e:
+            log_callback(f"  ⚠️ Transcript inválido ({e}), refazendo...")
+            trans, idi = baixar_legenda_yt(link, ['en','es','pt'], str(control_dir))
+            if not trans or not trans.strip():
+                transcript_path.write_text(
+                    json.dumps({"erro":"Falha ao obter transcrição automática.","idioma": idi},
+                               ensure_ascii=False, indent=4),
+                    encoding="utf-8"
+                )
+                log_callback(f"  ⚠️ Erro salvo em {transcript_path}")
+                return
+            transcript_path.write_text(
+                json.dumps({"transcricao_limpa": trans, "idioma": idi},
+                           ensure_ascii=False, indent=4),
+                encoding="utf-8"
+            )
+            log_callback(f"  ✅ Transcrição refeita e salva em {transcript_path} (idioma: {idi})")
+    else:
+        trans, idi = baixar_legenda_yt(link, ['en','es','pt'], str(control_dir))
+        if not trans or not trans.strip():
+            transcript_path.write_text(
+                json.dumps({"erro":"Falha ao obter transcrição automática.","idioma": idi},
+                           ensure_ascii=False, indent=4),
+                encoding="utf-8"
+            )
+            log_callback(f"  ⚠️ Erro salvo em {transcript_path}")
+            return
         transcript_path.write_text(
-            json.dumps({"erro": "Falha ao obter transcrição automática.", "idioma": idi},
+            json.dumps({"transcricao_limpa": trans, "idioma": idi},
                        ensure_ascii=False, indent=4),
             encoding="utf-8"
         )
-        log_callback(f"  ⚠️ Erro salvo em {transcript_path}")
-        return
+        log_callback(f"  ✅ Transcrição salva em {transcript_path} (idioma: {idi})")
 
-    transcript_path.write_text(
-        json.dumps({"transcricao_limpa": trans, "idioma": idi},
-                   ensure_ascii=False, indent=4),
-        encoding="utf-8"
-    )
-    log_callback(f"  ✅ Transcrição salva em {transcript_path} (idioma: {idi})")
+    # ─── Etapa 2: Resumo ──────────────────────────────────────────────
+    meta = json.loads(metadados_path.read_text(encoding="utf-8"))
+    if meta.get("resumo"):
+        log_callback("  ✅ Resumo já existe em metadados.json. Pulando.")
+    else:
+        sucesso = gerar_resumo(canal, video_id)
+        if not sucesso:
+            log_callback(f"  ⚠️ Falha ao gerar resumo.")
+            return
+
+    # ─── Etapa 3: Tópicos ──────────────────────────────────────────────
+
+    # carrega metadados para ver se já tem tópicos
+    meta = json.loads(metadados_path.read_text(encoding="utf-8"))
+    if meta.get("topicos"):
+        log_callback("  ✅ Tópicos já existem em metadados.json. Pulando.")
+    else:
+        sucesso = gerar_topicos(canal, video_id)
+        if not sucesso:
+            log_callback("  ⚠️ Falha ao gerar tópicos.")
+            return
+        log_callback("  ✅ Tópicos salvos em metadados.json")
+
+
+
+    # ─── Demais etapas (Áudio, Vídeo, etc) ──────────────────────────
     log_callback("  (Placeholder) ✅ Gerando áudio...")
     log_callback("  (Placeholder) ✅ Editando vídeo...")
     log_callback("  (Placeholder) 🏁 Pronto! Vídeo concluído.")

@@ -31,7 +31,7 @@ cd gerador
 python -m venv .venv
 ```
 
-> No Windows:
+> Ative o ambiente virtual no Windows:
 >
 > ```bash
 > .venv\Scripts\activate
@@ -88,7 +88,7 @@ Abra uma **Issue** ou me ache no [GitHub](https://github.com/JacsonAnderson).
 
 ---
 
-## 🗓️ Histórico de Mudanças & Diário da Depressão (meme ou verdade?)
+## 🗓️ Histórico de Mudanças & Diário da Depressão (é meme ou será que não?)
 
 ### 🧩 19/06/2025
 
@@ -96,10 +96,16 @@ Abra uma **Issue** ou me ache no [GitHub](https://github.com/JacsonAnderson).
 - A YouTube Transcript API decidiu me trolar com erros obscuros.
 - Criei um `db_manager.py` pra consertar uma lógica zoada. Um dia eu junto tudo no `app.py`… talvez.
 
+
+- **Lembrete para min** quando eu for juntar os modais de criar video e canais. NÃO POSSO ESQUECER DE REMOVER A PARTE DO CODIGO QUE CRIAR OS ARQUIVOS .db eu já to fazendo isso de forma independete com o `db_manager.py`
+
 ### 📉 21/06/2025
 
 - Passei a manhã inteira lutando com as transcrições automáticas.
 - A solução: usar `yt_dlp` pra baixar `.vtt` e `webvtt` pra limpar tudo.
 - **Bug nojento**: eu nomeava os arquivos com o `video_id` interno, mas buscava usando o **YouTube ID**. O `glob` não achava nada. Corrigido. Agora baixa UMA legenda e salva tudo direitinho em `transcript_original.json`.
+- **Verificadores**: adicionei um check no início que, se o `transcript_original.json` já existir e estiver válido, pula toda a parte de transcrição automática. Sem repetições desnecessárias.
 
-E seguimos... entre bugs e cafés.
+- **Modularização**: criei o `vf_roteiro.py` pra concentrar TODAS as funções de geração de roteiro e usar direto no `controller.py`. Workflow:
+  - Primeiro botei a geração de resumo… em menos de uma hora já estava rodando (pelo menos eu acho, kk).
+  - Depois fui pra geração de tópicos e levei um bug bobo: eu só buscava o `prompt_topicos` nas configs do banco, mas na real o prompt estava no `data/{canal}/prompts.json`. Resultado: `prompt_topicos` vazio e nenhum tópico gerado. Agora ele carrega dos dois lugares certinho e não faltam tópicos.
