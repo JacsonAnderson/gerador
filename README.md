@@ -112,3 +112,7 @@ Abra uma **Issue** ou me ache no [GitHub](https://github.com/JacsonAnderson).
   - Adicionar o gerador de introdução foi bem facil depois de ter percebido os erros que eu cometi antes, estamos progredindo muito rapido. Eu espero conseguir terminar tudo hoje
   - Foi o mesmo com o gerador de conteudo, deveras rapido até de mais... Suspeito que tem algo errado.
 
+  - Realmente tinha algo errado kkk passei 1 hora corregindo bugs de idioma e coisas assim.
+  - Passei a tarde arrumando bugs, agora aparentemente esta funcional. Vamos pasar para um novo modulo `vf_tts.py`
+  
+
