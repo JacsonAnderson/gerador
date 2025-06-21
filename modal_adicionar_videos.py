@@ -57,7 +57,6 @@ def obter_configs_do_canal(canal_nome):
         return row[0] if row else "{}"
 
 def abrir_modal_adicionar_videos(janela_pai, callback_atualizar_lista=None):
-    verificar_ou_criar_videos_db()
 
     modal = tb.Toplevel(janela_pai)
     modal.title("Adicionar Vídeos")

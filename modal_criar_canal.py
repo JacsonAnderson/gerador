@@ -32,7 +32,6 @@ def verificar_e_criar_db():
             conn.commit()
 
 def abrir_modal_criar_canal(janela_pai, callback_atualizar_lista=None):
-    verificar_e_criar_db()
 
     modal = tb.Toplevel(janela_pai)
     modal.title("Criar Canal")
