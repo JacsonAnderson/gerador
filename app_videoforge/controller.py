@@ -292,10 +292,6 @@ def processar_video(canal, video_id):
 
 
 
-
-
-
-
     # ─── VÍDEO ─────────────────────────────────────────────
     # Só entra aqui se áudio estiver OK (1) ou IGNORADO (2)
     log_callback("  (Placeholder) ✅ Editando vídeo...")
